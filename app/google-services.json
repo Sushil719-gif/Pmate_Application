@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "847740303822",
+    "project_id": "pmate-79815",
+    "storage_bucket": "pmate-79815.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:847740303822:android:55d6feea48a0b42623939f",
+        "android_client_info": {
+          "package_name": "com.example.pmate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASjk7kUig5DyeiHJGwa5NvEsbiD90P2g4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
