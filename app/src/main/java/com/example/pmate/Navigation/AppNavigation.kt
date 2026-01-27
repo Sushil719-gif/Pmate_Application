@@ -7,17 +7,18 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.example.pmate.Auth.LoginScreen
 
 import com.example.pmate.ui.Admin.jobs.AddJobScreen
 import com.example.pmate.ui.Admin.jobs.AdminJobDetailsScreen
 import com.example.pmate.ui.Admin.jobs.AdminJobs
 import com.example.pmate.ui.Admin.AdminMainScreen
 import com.example.pmate.ui.Admin.dashboard.company.AllNoticesAdminScreen
-import com.example.pmate.ui.Admin.dashboard.company.CompanyActiveDetailsScreen
 
-import com.example.pmate.ui.Admin.dashboard.company.CompanyDetailsScreen
+
+
 import com.example.pmate.ui.Admin.dashboard.company.CompanyListScreen
-import com.example.pmate.ui.Admin.dashboard.company.CompanyHoldListScreen
+
 import com.example.pmate.ui.Admin.dashboard.company.SendNoticeScreen
 
 
@@ -28,10 +29,16 @@ import com.example.pmate.ui.Admin.jobs.ApplicantsListScreen
 import com.example.pmate.ui.Admin.jobs.EditJobScreen
 import com.example.pmate.ui.Admin.settings.AboutAppScreen
 import com.example.pmate.ui.Admin.settings.ChangePasswordScreen
-import com.example.pmate.ui.Admin.settings.LogoutConfirmScreen
+import com.example.pmate.Auth.LogoutConfirmScreen
+import com.example.pmate.ui.Admin.dashboard.company.ActiveCompaniesListScreen
+import com.example.pmate.ui.Admin.dashboard.company.CompanyOnHoldListScreen
+import com.example.pmate.ui.Admin.dashboard.company.CompletedCompaniesListScreen
+
+import com.example.pmate.ui.Admin.dashboard.company.PlacedStudentsScreen
 import com.example.pmate.ui.Admin.settings.UpdateProfileScreen
-import com.example.pmate.ui.Student.StudentHomeScreen
-import com.example.pmate.ui.Student.JobDetailsScreen
+
+
+import com.example.pmate.ui.Student.studentjobs.JobDetailsScreen
 import com.example.pmate.ui.Role.RoleSelectionScreen
 import com.example.pmate.ui.Student.StudentMainScreen
 import com.example.pmate.ui.Student.studentdashboard.StudentNoticeBoardScreen
@@ -51,10 +58,25 @@ fun AppNavigation(navController: NavHostController) {
         // ROLE SELECTION
         composable(Screen.RoleSelection.route) {
             RoleSelectionScreen(
-                onAdminClick = { navController.navigate(Screen.AdminMain.route) },
-                onStudentClick = { navController.navigate(Screen.StudentMain.route) }
+                onAdminClick = { navController.navigate("login/admin") },
+                onStudentClick = { navController.navigate("login/student") }
+
+
             )
         }
+
+        //Login
+
+        composable(
+            route = "login/{expectedRole}",
+            arguments = listOf(navArgument("expectedRole") { type = NavType.StringType })
+        ) { backStack ->
+
+            val expectedRole = backStack.arguments?.getString("expectedRole") ?: "student"
+            LoginScreen(navController, expectedRole)
+        }
+
+
 
         // ADMIN MODULE......
 
@@ -62,9 +84,19 @@ fun AppNavigation(navController: NavHostController) {
             AdminMainScreen(navController)
         }
 
+        //placed students details
+
+        composable("PlacedStudents/{batch}") {
+            val batch = it.arguments?.getString("batch")!!
+            PlacedStudentsScreen(navController, batch)
+        }
+
+
+
+
         // JOB SCREENS
         composable("addJob") { AddJobScreen(navController) }
-        composable("adminJobs") { AdminJobs(navController) }
+        composable("adminJobs") { "adminJobs/{batch}" }
 
         composable(
             route = "job_details_admin/{jobId}",
@@ -101,33 +133,48 @@ fun AppNavigation(navController: NavHostController) {
 
         // ------------------ COMPANY DASHBOARD ------------------
 
-        composable("CompanyList") {
-            CompanyListScreen(navController)
+        composable("CompanyList/{batch}") { backStackEntry ->
+            val batch = backStackEntry.arguments?.getString("batch") ?: ""
+            CompanyListScreen(navController, batch)
         }
 
-        // COMPLETED COMPANIES → CompanyDetailsScreen
-        composable("CompanyDetails/{companyName}") { entry ->
-            val companyName = entry.arguments?.getString("companyName") ?: ""
-            CompanyDetailsScreen(navController, companyName)
+        composable("ActiveCompanies/{batch}") { backStack ->
+            val batch = backStack.arguments?.getString("batch")!!
+            ActiveCompaniesListScreen(
+                navController = navController,
+                batch = batch
+            )
         }
 
-        // ACTIVE COMPANIES → CompanyActiveDetailsScreen
-        composable("CompanyActiveDetails/{companyName}") { entry ->
-            val companyName = entry.arguments?.getString("companyName") ?: ""
-            CompanyActiveDetailsScreen(navController, companyName)
+        composable("HoldCompanies/{batch}") { backStack ->
+            val batch = backStack.arguments?.getString("batch")!!
+            CompanyOnHoldListScreen(
+                navController = navController,
+                batch = batch
+            )
         }
-        composable("CompanyHoldList") {
-            CompanyHoldListScreen(navController)
+
+        composable("CompletedCompanies/{batch}") { backStack ->
+            val batch = backStack.arguments?.getString("batch")!!
+            CompletedCompaniesListScreen(
+                navController = navController,
+                batch = batch
+            )
         }
+
+
 
         // ------------------- Notice Board Section -------------------
 
-        composable("SendNotice") {
-            SendNoticeScreen(navController)
+        composable("SendNotice/{batch}") {
+            val batch = it.arguments?.getString("batch")!!
+            SendNoticeScreen(navController, batch)
         }
+
         composable("AllNoticesAdmin") {
             AllNoticesAdminScreen(navController)
         }
+
 
 //STUDENT MODULE.....
 

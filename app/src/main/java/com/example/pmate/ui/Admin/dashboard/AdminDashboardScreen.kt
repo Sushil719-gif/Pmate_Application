@@ -13,9 +13,29 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
+import java.util.Calendar
+
+import com.example.pmate.ThreeBatchesAccess.BatchUtils
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+
 
 @Composable
-fun AdminDashboardScreen(navController: NavController) {
+fun AdminDashboardScreen(
+    navController: NavController,
+    selectedBatch: String,
+    onBatchChange: (String) -> Unit
+)
+ {
+
+
+    val batchOptions = BatchUtils.getAllowedBatches()
+
+
+    var batchMenuExpanded by remember { mutableStateOf(false) }
+
 
     Column(
         modifier = Modifier
@@ -23,7 +43,6 @@ fun AdminDashboardScreen(navController: NavController) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
             .padding(bottom = 90.dp)
-
     ) {
 
         Text(
@@ -32,54 +51,85 @@ fun AdminDashboardScreen(navController: NavController) {
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
+
+        // -------- Batch Selector --------
+        Box {
+            OutlinedButton(onClick = { batchMenuExpanded = true }) {
+                Text("Batch: $selectedBatch")
+            }
+
+            DropdownMenu(
+                expanded = batchMenuExpanded,
+                onDismissRequest = { batchMenuExpanded = false }
+            ) {
+                batchOptions.forEach { year ->
+                    DropdownMenuItem(
+                        text = { Text(year) },
+                        onClick = {
+                            onBatchChange(year)
+
+                            batchMenuExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
 
         // ---------- STUDENT SECTION ----------
-        Text(
-            text = "Student Insights",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Text("Student Insights", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(12.dp))
+        StudentSection(navController, selectedBatch)
 
-        Spacer(modifier = Modifier.height(12.dp))
-        StudentSection(navController)
-
-        Spacer(modifier = Modifier.height(25.dp))
+        Spacer(Modifier.height(25.dp))
 
         // ---------- COMPANY SECTION ----------
-        Text(
-            text = "Company Insights",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Text("Company Insights", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(12.dp))
+        CompanySection(navController, selectedBatch)
 
-        Spacer(modifier = Modifier.height(12.dp))
-        CompanySection(navController)
-
-        Spacer(modifier = Modifier.height(25.dp))
+        Spacer(Modifier.height(25.dp))
 
         // ---------- NOTICE BOARD SECTION ----------
-        Text(
-            text = "Notice Board",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-        NoticeBoardSection(navController)
+        Text("Notice Board", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(12.dp))
+        NoticeBoardSection(navController, selectedBatch)
     }
 }
+
 
 
 // ------------------------ STUDENT SECTION ------------------------
 
 @Composable
-fun StudentSection(navController: NavController) {
+fun StudentSection(navController: NavController, batch: String) {
+
+    val repo = remember { FirestoreRepository() }
+    var total by remember { mutableStateOf(0) }
+    var placed by remember { mutableStateOf(0) }
+    var notPlaced by remember { mutableStateOf(0) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(batch) {
+        scope.launch {
+            val students = repo.getStudentsByBatch(batch)
+
+            total = students.size
+            placed = students.count { it.placementStatus == "PLACED" }
+            notPlaced = students.count { it.placementStatus != "PLACED" }
+        }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
-        DashboardCard(title = "Total Students (All Batches)", value = "0") {
-            navController.navigate("StudentBatchList")
-        }
+        DashboardCard(
+            title = "Total Students",
+            value = total.toString(),
+
+        )
+
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -87,72 +137,90 @@ fun StudentSection(navController: NavController) {
         ) {
             DashboardCard(
                 title = "Placed Students",
-                value = "0",
+                value = placed.toString(),
                 modifier = Modifier.weight(1f)
             ) {
-                navController.navigate("PlacedStudents")
+                navController.navigate("PlacedStudents/$batch")
             }
 
             DashboardCard(
                 title = "Not Placed",
-                value = "0",
+                value = notPlaced.toString(),
                 modifier = Modifier.weight(1f)
-            ) {
-                navController.navigate("NonPlacedStudents")
-            }
+            ) 
         }
     }
 }
+
 
 
 // ------------------------ COMPANY SECTION ------------------------
 
 @Composable
-fun CompanySection(navController: NavController) {
+fun CompanySection(navController: NavController, batch: String) {
 
     val repo = remember { FirestoreRepository() }
-    var companyCount by remember { mutableStateOf(0) }
+    var totalCompanies by remember { mutableStateOf(0) }
+    var activeCount by remember { mutableStateOf(0) }
     var holdCount by remember { mutableStateOf(0) }
+    var completedCount by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(batch) {
         scope.launch {
             val jobs = repo.getAllJobs()
+                .filter { it.batchYear == batch }
 
-            // Unique companies
             val grouped = jobs.groupBy { it.company }
-            companyCount = grouped.size
 
-            // Count On Hold
+            totalCompanies = grouped.size
+            activeCount = jobs.count { it.status == "Active" }
             holdCount = jobs.count { it.status == "On Hold" }
+            completedCount = jobs.count { it.status == "Completed" }
         }
     }
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
         DashboardCard(
-            title = "Total Companies",
-            value = companyCount.toString()
-        ) {
-            navController.navigate("CompanyList")
+            title = "Total Companies visited so far",
+            value = totalCompanies.toString()
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            DashboardCard(
+                title = "Active",
+                value = activeCount.toString(),
+                modifier = Modifier.weight(1f)
+            ){
+                navController.navigate("ActiveCompanies/$batch")
+            }
+
+            DashboardCard(
+                title = "On Hold",
+                value = holdCount.toString(),
+                modifier = Modifier.weight(1f)
+            ){
+                navController.navigate("HoldCompanies/$batch")
+            }
         }
 
         DashboardCard(
-            title = "Companies On Hold",
-            value = holdCount.toString()
-        ) {
-            navController.navigate("CompanyHoldList")
+            title = "Completed Companies",
+            value = completedCount.toString()
+        ){
+            navController.navigate("CompletedCompanies/$batch")
         }
     }
 }
 
 
+
 // ------------------------ NOTICE BOARD SECTION ------------------------
 
 @Composable
-fun NoticeBoardSection(navController: NavController) {
+fun NoticeBoardSection(navController: NavController, batch: String) {
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
@@ -160,7 +228,7 @@ fun NoticeBoardSection(navController: NavController) {
             title = "Send Notice",
             value = "",
         ) {
-            navController.navigate("SendNotice")
+            navController.navigate("SendNotice/$batch")
         }
 
         DashboardCard(
@@ -174,6 +242,7 @@ fun NoticeBoardSection(navController: NavController) {
 
 
 
+
 // ------------------------ REUSABLE DASHBOARD CARD ------------------------
 
 @Composable
@@ -181,7 +250,7 @@ fun DashboardCard(
     title: String,
     value: String,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null
 ) {
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -189,17 +258,39 @@ fun DashboardCard(
         modifier = modifier
             .fillMaxWidth()
             .height(105.dp)
-            .clickable { onClick() }
+            .then(
+                if (onClick != null) Modifier.clickable { onClick() }
+                else Modifier
+            )
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.Center
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(6.dp))
-            if (value.isNotEmpty()) {
-                Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(6.dp))
+                if (value.isNotEmpty()) {
+                    Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // ➜ Arrow only if clickable
+            if (onClick != null) {
+                Icon(
+                    imageVector = Icons.Default.ArrowForwardIos,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
         }
     }
 }
+
+

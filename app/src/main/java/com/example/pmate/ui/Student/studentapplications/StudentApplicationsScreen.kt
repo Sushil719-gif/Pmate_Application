@@ -1,9 +1,5 @@
 package com.example.pmate.ui.Student.studentapplications
 
-
-
-
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -12,8 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.WorkHistory
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,14 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-
-// Temporary static model until Firestore is added
-data class DummyApplication(
-    val company: String,
-    val role: String,
-    val status: String,
-    val jobId: String
-)
+import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
+import com.example.pmate.Firestore.DataModels.Applicant
+import com.example.pmate.Firestore.DataModels.StudentApplicationUI
+import kotlinx.coroutines.launch
 
 @Composable
 fun StudentApplicationsScreen(
@@ -37,18 +27,44 @@ fun StudentApplicationsScreen(
     navController: NavController
 ) {
 
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { visible = true }
+    val scope = rememberCoroutineScope()
 
-    // ------------------------------------------------------------
-    // STATIC APPLICATION LIST (will replace with Firestore later)
-    // ------------------------------------------------------------
-    val applications = listOf(
-        DummyApplication("Google", "Android Intern", "Under Review", "1"),
-        DummyApplication("TCS", "Software Engineer", "Shortlisted", "2"),
-        DummyApplication("Infosys", "Support Exec", "Rejected", "3"),
-        DummyApplication("Wipro", "Cloud Analyst", "Selected", "4")
-    )
+    val repo = remember { FirestoreRepository() }
+
+    var visible by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    var applications by remember { mutableStateOf<List<StudentApplicationUI>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        visible = true
+
+        repo.listenStudentApplications { applicantList ->
+
+            scope.launch {
+
+                applications = applicantList.mapNotNull { applicant ->
+
+                    val job = repo.getJobById(applicant.jobId)
+                    val student = repo.getStudentById(applicant.studentId)
+
+                    if (job != null && student != null) {
+                        StudentApplicationUI(
+                            companyName = job.company,
+                            role = job.role,
+                            placementStatus = applicant.status
+
+                        )
+                    } else null
+                }
+
+                loading = false
+            }
+        }
+    }
+
+
+
+
 
     Column(
         modifier = modifier
@@ -60,9 +76,16 @@ fun StudentApplicationsScreen(
         Text("Your Applications", fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
 
+        if (loading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Column
+        }
+
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { 50 })
+            enter = fadeIn() + slideInVertically { 50 }
         ) {
 
             if (applications.isEmpty()) {
@@ -76,16 +99,13 @@ fun StudentApplicationsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
 
                     applications.forEach { app ->
-
                         ApplicationTile(
-                            company = app.company,
+                            company = app.companyName,
                             role = app.role,
-                            status = app.status
-                        ) {
-                            // Navigate to job details if needed later
-                            // navController.navigate("job_details/${app.jobId}")
-                        }
+                            placementStatus = app.placementStatus
+                        ) { }
                     }
+
                 }
             }
         }
@@ -97,16 +117,15 @@ fun StudentApplicationsScreen(
 fun ApplicationTile(
     company: String,
     role: String,
-    status: String,
+    placementStatus: String?,
     onClick: () -> Unit
 ) {
 
-    val statusColor = when (status) {
-        "Shortlisted" -> Color(0xFF2E7D32)
-        "Under Review" -> Color(0xFF0277BD)
-        "Selected" -> Color(0xFF4CAF50)
-        "Rejected" -> Color.Red
-        else -> Color.Gray
+    val (statusText, statusColor) = when (placementStatus) {
+        "SHORTLISTED" -> "Shortlisted" to Color(0xFFEF6C00)
+        "PLACED" -> "Placed" to Color(0xFF2E7D32)
+        "NOT_SHORTLISTED" -> "Not Selected" to Color.Red
+        else -> "Under Review" to Color(0xFF1565C0)
     }
 
     Card(
@@ -130,7 +149,7 @@ fun ApplicationTile(
             ) {
                 Text("Status:", fontWeight = FontWeight.Medium)
                 Text(
-                    text = status,
+                    text = statusText,
                     color = statusColor,
                     fontWeight = FontWeight.Bold
                 )

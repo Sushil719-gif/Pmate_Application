@@ -13,8 +13,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Firestore.DataModels.NoticeModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
-import com.example.pmate.ui.Admin.dashboard.company.NoticeModel
+
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,12 +32,14 @@ fun StudentNoticeBoardScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        scope.launch {
-            val fetchedNotices = repo.getAllNotices()
-            notices = fetchedNotices.sortedByDescending { it.timestamp }
-            loading = false
-        }
+        val student = repo.getCurrentStudent()
+        val fetchedNotices = repo.getAllNotices()
+            .filter { it.batch == student.batchYear }
+
+        notices = fetchedNotices.sortedByDescending { it.timestamp }
+        loading = false
     }
+
 
     Scaffold { padding ->
 

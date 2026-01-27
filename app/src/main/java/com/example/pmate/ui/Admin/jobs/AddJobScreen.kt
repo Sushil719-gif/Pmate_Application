@@ -1,8 +1,10 @@
 package com.example.pmate.ui.Admin.jobs
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -36,6 +38,9 @@ fun AddJobScreen(
 
     // STATES
     var company by remember { mutableStateOf("") }
+    var batchYear by remember { mutableStateOf("") }
+
+
     var role by remember { mutableStateOf("") }
     var stipend by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
@@ -52,6 +57,20 @@ fun AddJobScreen(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    //Eligibility
+
+    val eligibilityOptions = listOf(
+        "Unplaced Students Only",
+        "All Students (Backup Offer)"
+    )
+
+    var selectedEligibility by remember {
+        mutableStateOf(eligibilityOptions.first())
+    }
+
+    var eligibilityExpanded by remember { mutableStateOf(false) }
+
 
     // File picker state (we keep it, but uploading is disabled)
     var selectedFiles by remember { mutableStateOf<List<Uri>>(emptyList()) }
@@ -85,6 +104,13 @@ fun AddJobScreen(
             InputField("Job Role", role) { role = it }
             InputField("Stipend / Package", stipend) { stipend = it }
             InputField("Location", location) { location = it }
+            BatchYearDropdown(
+                selectedYear = batchYear,
+                onYearSelected = { batchYear = it }
+            )
+
+
+
 
             // Job Type Dropdown
             ExposedDropdownMenuBox(
@@ -120,6 +146,44 @@ fun AddJobScreen(
                 }
             }
 
+// Eligibility dropdown
+            ExposedDropdownMenuBox(
+                expanded = eligibilityExpanded,
+                onExpandedChange = { eligibilityExpanded = !eligibilityExpanded }
+            ) {
+                OutlinedTextField(
+                    value = selectedEligibility,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Eligibility") },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(
+                            expanded = eligibilityExpanded
+                        )
+                    }
+                )
+
+                ExposedDropdownMenu(
+                    expanded = eligibilityExpanded,
+                    onDismissRequest = { eligibilityExpanded = false }
+                ) {
+                    eligibilityOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                selectedEligibility = option
+                                eligibilityExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+
+
             // Deadline Picker
             OutlinedTextField(
                 value = deadline,
@@ -131,12 +195,16 @@ fun AddJobScreen(
                         Icons.Default.CalendarMonth,
                         contentDescription = null,
                         modifier = Modifier.clickable {
-                            pickDate(context) { date -> deadline = date }
+                            pickDateTime(context) { dateTime ->
+                                deadline = dateTime
+                            }
+
                         }
                     )
                 },
                 modifier = Modifier.fillMaxWidth()
             )
+
 
             // Description Box
             OutlinedTextField(
@@ -173,6 +241,8 @@ fun AddJobScreen(
             )
 
 
+
+
             // Submit
             Button(
                 onClick = {
@@ -186,7 +256,7 @@ fun AddJobScreen(
                     scope.launch {
 
                         // ---------------------------------------
-                        // ❌ FILE UPLOADING DISABLED TEMPORARILY
+                        //  FILE UPLOADING DISABLED TEMPORARILY
                         // ---------------------------------------
                         // Firebase Storage requires billing plan.
                         // So for now we skip file uploads and save empty list.
@@ -203,6 +273,11 @@ fun AddJobScreen(
                             deadline = deadline,
                             description = description,
                             instructions = instructions,
+                            batchYear = batchYear,
+                            eligibilityType = if (selectedEligibility == "All Students")
+                                "ALL"
+                            else
+                                "UNPLACED_ONLY",
 
                             files = uploadedUrls
                         )
@@ -213,9 +288,17 @@ fun AddJobScreen(
                         loading = false
 
                         if (jobId != null) {
+
+                            Toast.makeText(
+                                context,
+                                "Job created successfully",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
                             navController.popBackStack()
                             navController.navigate("adminJobs")
                         }
+
                     }
                 },
                 modifier = Modifier
@@ -239,6 +322,53 @@ fun AddJobScreen(
 
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BatchYearDropdown(
+    selectedYear: String,
+    onYearSelected: (String) -> Unit
+) {
+    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+    val years = ((currentYear - 1)..(currentYear + 6)).map { it.toString() }
+
+
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = selectedYear,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Batch Year") },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded)
+            }
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            years.forEach { year ->
+                DropdownMenuItem(
+                    text = { Text(year) },
+                    onClick = {
+                        onYearSelected(year)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+
 @Composable
 fun InputField(label: String, value: String, onChange: (String) -> Unit) {
     OutlinedTextField(
@@ -249,13 +379,48 @@ fun InputField(label: String, value: String, onChange: (String) -> Unit) {
     )
 }
 
-fun pickDate(context: Context, onSelected: (String) -> Unit) {
-    val c = Calendar.getInstance()
-    val year = c.get(Calendar.YEAR)
-    val month = c.get(Calendar.MONTH)
-    val day = c.get(Calendar.DAY_OF_MONTH)
 
-    DatePickerDialog(context, { _, y, m, d ->
-        onSelected("$d/${m + 1}/$y")
-    }, year, month, day).show()
+fun pickDateTime(
+    context: Context,
+    onDateTimeSelected: (String) -> Unit
+) {
+    val calendar = Calendar.getInstance()
+
+    DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+
+            // After date → pick time
+            TimePickerDialog(
+                context,
+                { _, hour, minute ->
+
+                    val selectedCal = Calendar.getInstance().apply {
+                        set(Calendar.YEAR, year)
+                        set(Calendar.MONTH, month)
+                        set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                        set(Calendar.HOUR_OF_DAY, hour)
+                        set(Calendar.MINUTE, minute)
+                    }
+
+                    val format = java.text.SimpleDateFormat(
+                        "dd/MM/yyyy HH:mm",
+                        Locale.getDefault()
+                    )
+
+                    onDateTimeSelected(format.format(selectedCal.time))
+
+                },
+                calendar.get(Calendar.HOUR_OF_DAY),
+                calendar.get(Calendar.MINUTE),
+                true
+            ).show()
+
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    ).show()
 }
+
+

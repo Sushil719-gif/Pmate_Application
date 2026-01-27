@@ -1,14 +1,12 @@
 package com.example.pmate.ui.Student.studentdashboard
 
-
-
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,6 +20,42 @@ fun StudentDashboardScreen(
     modifier: Modifier = Modifier,
     navController: NavController
 ) {
+
+    val repo = remember { FirestoreRepository() }
+    val scope = rememberCoroutineScope()
+
+    var batch by remember { mutableStateOf("") }
+    var totalStudents by remember { mutableStateOf(0) }
+    var placedCount by remember { mutableStateOf(0) }
+    var notPlacedCount by remember { mutableStateOf(0) }
+
+    var totalCompanies by remember { mutableStateOf(0) }
+    var activeCompanies by remember { mutableStateOf(0) }
+    var holdCompanies by remember { mutableStateOf(0) }
+    var completedCount by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        scope.launch {
+
+            val student = repo.getCurrentStudent()
+            batch = student.batchYear
+
+            val students = repo.getStudentsByBatch(batch)
+            totalStudents = students.size
+            placedCount = students.count { it.placementStatus == "PLACED" }
+            notPlacedCount = students.count { it.placementStatus != "PLACED" }
+
+            val jobs = repo.getAllJobs()
+                .filter { it.batchYear == batch }
+
+            totalCompanies = jobs.groupBy { it.company }.size
+            activeCompanies = jobs.count { it.status == "Active" }
+            holdCompanies = jobs.count { it.status == "On Hold" }
+            completedCount = jobs.count { it.status == "Completed" }
+
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -29,138 +63,104 @@ fun StudentDashboardScreen(
             .padding(16.dp)
     ) {
 
-        Text(
-            text = "Student Dashboard",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+        Text("Student Dashboard", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("Batch: $batch", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+
+        Spacer(Modifier.height(20.dp))
+
+        // ---------------- STUDENT INSIGHTS ----------------
+
+        Text("Student Insights", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(12.dp))
+
+        DashboardCard(
+            title = "Total Students",
+            value = totalStudents.toString()
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
 
-        // ---------- STUDENT INSIGHTS ----------
-        Text(
-            text = "Student Insights",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
 
-        Spacer(modifier = Modifier.height(12.dp))
-        StudentInsightsSection(navController)
-
-        Spacer(modifier = Modifier.height(25.dp))
-
-        // ---------- COMPANY INSIGHTS ----------
-        Text(
-            text = "Company Insights",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-        CompanyInsightsSection(navController)
-
-        Spacer(modifier = Modifier.height(25.dp))
-
-        // ---------- NOTICE BOARD ----------
-        Text(
-            text = "Notice Board",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-        StudentNoticeBoardSection(navController)
-    }
-}
-
-@Composable
-fun StudentInsightsSection(navController: NavController) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-
-        DashboardCard(title = "Total Students (All Batches)", value = "0") {
-            navController.navigate("StudentBatchList")
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
             DashboardCard(
                 title = "Placed Students",
-                value = "0",
-                modifier = Modifier.weight(1f)
+                value = placedCount.toString(),
+                modifier = Modifier.weight(1f),
+                showArrow = true
             ) {
-                navController.navigate("PlacedStudents")
+                navController.navigate("PlacedStudents/$batch")
             }
 
             DashboardCard(
                 title = "Not Placed",
-                value = "0",
+                value = notPlacedCount.toString(),
                 modifier = Modifier.weight(1f)
-            ) {
-                navController.navigate("NonPlacedStudents")
-            }
+            )
         }
-    }
-}
 
-@Composable
-fun CompanyInsightsSection(navController: NavController) {
+        Spacer(Modifier.height(25.dp))
 
-    val repo = remember { FirestoreRepository() }
-    var companyCount by remember { mutableStateOf(0) }
-    var holdCount by remember { mutableStateOf(0) }
-    val scope = rememberCoroutineScope()
+        // ---------------- COMPANY INSIGHTS ----------------
 
-    LaunchedEffect(Unit) {
-        scope.launch {
-            val jobs = repo.getAllJobs()
-            val grouped = jobs.groupBy { it.company }
-            companyCount = grouped.size
-            holdCount = jobs.count { it.status == "On Hold" }
-        }
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Company Insights", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(12.dp))
 
         DashboardCard(
             title = "Total Companies",
-            value = companyCount.toString()
-        ) {
-            navController.navigate("CompanyList")
+            value = totalCompanies.toString()
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            DashboardCard(
+                title = "Active Companies",
+                value = activeCompanies.toString(),
+                modifier = Modifier.weight(1f),
+                showArrow = true
+            ) {
+                navController.navigate("ActiveCompanies/$batch")
+            }
+
+            DashboardCard(
+                title = "On Hold",
+                value = holdCompanies.toString(),
+                modifier = Modifier.weight(1f),
+                showArrow = true
+            ) {
+                navController.navigate("HoldCompanies/$batch")
+
+            }
         }
+
+        Spacer(Modifier.height(12.dp))
 
         DashboardCard(
-            title = "Companies On Hold",
-            value = holdCount.toString()
+            title = "Completed Companies",
+            value = completedCount.toString(),
+            showArrow = true
         ) {
-            navController.navigate("CompanyHoldList")
+            navController.navigate("CompletedCompanies/$batch")
         }
 
+        Spacer(Modifier.height(25.dp))
 
-    }
-}
+        // ---------------- NOTICE BOARD ----------------
 
-@Composable
-fun StudentNoticeBoardSection(navController: NavController) {
-
-    val repo = remember { FirestoreRepository() }
-    var noticeCount by remember { mutableStateOf(0) }
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        scope.launch {
-            noticeCount = repo.getAllNotices().size
-        }
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Notice Board", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(12.dp))
 
         DashboardCard(
-            title = "Total Notices",
-            value = noticeCount.toString()
+            title = "View Notices",
+            value = "",
+            showArrow = true
         ) {
             navController.navigate("StudentNotices")
+
         }
     }
 }
@@ -171,7 +171,8 @@ fun DashboardCard(
     title: String,
     value: String,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    showArrow: Boolean = false,
+    onClick: (() -> Unit)? = null
 ) {
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -179,16 +180,32 @@ fun DashboardCard(
         modifier = modifier
             .fillMaxWidth()
             .height(105.dp)
-            .clickable { onClick() }
+            .let {
+                if (onClick != null) it.clickable { onClick() } else it
+            }
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.Center
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Spacer(modifier = Modifier.height(6.dp))
-            if (value.isNotEmpty()) {
-                Text(text = value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+
+            Column {
+                Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                if (value.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            if (showArrow) {
+                Text(
+                    text = ">",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

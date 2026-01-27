@@ -1,12 +1,11 @@
-package com.example.pmate.ui.Admin.settings
-
-
+package com.example.pmate.Auth
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -14,9 +13,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
+import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogoutConfirmScreen(navController: NavController) {
+
+    val context = LocalContext.current
+    val session = SessionManager(context)
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -59,9 +65,11 @@ fun LogoutConfirmScreen(navController: NavController) {
 
                 Button(
                     onClick = {
-                        // logout logic later
-                        navController.navigate("roleSelection") {
-                            popUpTo(0) // clears entire backstack
+                        scope.launch {
+                            session.clearSession()
+                            navController.navigate("role_selection") {
+                                popUpTo(0) { inclusive = true }
+                            }
                         }
                     },
                     modifier = Modifier.width(130.dp),

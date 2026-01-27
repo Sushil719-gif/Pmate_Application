@@ -23,21 +23,28 @@ import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
 
 @Composable
-fun AdminJobs(navController: NavController, modifier: Modifier = Modifier) {
+fun AdminJobs(
+    navController: NavController,
+    batch: String,
+    modifier: Modifier = Modifier
+)
+ {
 
     val repo = remember { FirestoreRepository() }
     var jobList by remember { mutableStateOf<List<JobModel>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        scope.launch {
-            jobList = repo.getAllJobs()
-            loading = false
-        }
-    }
+     LaunchedEffect(batch) {
+         repo.listenAllJobs { updatedJobs ->
+             jobList = updatedJobs.filter { it.batchYear == batch }
+             loading = false
+         }
+     }
 
-    Box(
+
+
+     Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFFF7F7F7))
@@ -51,7 +58,8 @@ fun AdminJobs(navController: NavController, modifier: Modifier = Modifier) {
 
             // Title
             Text(
-                "All Jobs",
+                "All Jobs — Batch $batch",
+
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 12.dp)
@@ -125,6 +133,17 @@ fun JobListCard(job: JobModel, onClick: () -> Unit) {
             Text(job.company, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text(job.role, fontSize = 16.sp, color = Color.Gray)
 
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                "Batch: ${job.batchYear}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF6750A4)
+            )
+
+
             Spacer(Modifier.height(8.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -176,6 +195,19 @@ fun StatusDialog(job: JobModel, onDismiss: () -> Unit) {
         title = { Text("Update Status") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            repo.updateJobStatus(job.jobId, "Active")
+                            onDismiss()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+                ) {
+                    Text("Active")
+                }
+
 
                 Button(
                     onClick = {

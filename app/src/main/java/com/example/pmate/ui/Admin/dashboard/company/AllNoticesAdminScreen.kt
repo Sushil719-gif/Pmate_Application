@@ -1,7 +1,5 @@
 package com.example.pmate.ui.Admin.dashboard.company
 
-
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,15 +12,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
+import com.example.pmate.Firestore.DataModels.NoticeModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-
-data class NoticeModel(
-    val title: String = "",
-    val message: String = "",
-    val timestamp: Long = 0L
-)
+import kotlin.collections.sortedByDescending
 
 @Composable
 fun AllNoticesAdminScreen(navController: NavController) {
@@ -76,13 +70,13 @@ fun AllNoticesAdminScreen(navController: NavController) {
         }
     }
 }
+
 @Composable
 fun NoticeCard(notice: NoticeModel) {
 
     val sdf = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
     val dateString = sdf.format(Date(notice.timestamp))
 
-    // Split message by new lines for bullet points
     val bulletPoints = notice.message.split("\n").filter { it.isNotBlank() }
 
     Card(
@@ -95,9 +89,14 @@ fun NoticeCard(notice: NoticeModel) {
 
             Text(notice.title, fontSize = 18.sp, fontWeight = FontWeight.Bold)
 
+            Text(
+                "Batch: ${notice.batch}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.primary
+            )
+
             Spacer(Modifier.height(6.dp))
 
-            // Show each line as a bullet point
             bulletPoints.forEach { point ->
                 Text("• $point", fontSize = 14.sp)
                 Spacer(Modifier.height(4.dp))
@@ -113,4 +112,3 @@ fun NoticeCard(notice: NoticeModel) {
         }
     }
 }
-

@@ -1,7 +1,9 @@
 package com.example.pmate.ui.Admin.jobs
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -135,7 +137,7 @@ fun EditJobScreen(
                         Icons.Default.CalendarMonth,
                         contentDescription = null,
                         modifier = Modifier.clickable {
-                            pickEditDate(context) { picked ->
+                            pickEditDateTime(context) { picked ->
                                 deadline = picked
                             }
                         }
@@ -143,6 +145,7 @@ fun EditJobScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             )
+
 
             // Description
             OutlinedTextField(
@@ -185,7 +188,11 @@ fun EditJobScreen(
                     scope.launch {
                         repo.updateJob(updatedJob)
                         updating = false
-
+                        Toast.makeText(
+                            context,
+                            "Job edited successfully ",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         navController.navigate("job_details_admin/$jobId") {
                             popUpTo("adminJobs") { inclusive = false }
                         }
@@ -206,7 +213,7 @@ fun EditJobScreen(
     }
 }
 
-// 🚀 UNIQUE Edit Input Field
+//  UNIQUE Edit Input Field
 @Composable
 fun EditInputField(label: String, value: String, onChange: (String) -> Unit) {
     OutlinedTextField(
@@ -217,14 +224,46 @@ fun EditInputField(label: String, value: String, onChange: (String) -> Unit) {
     )
 }
 
-// 🚀 UNIQUE Edit Date Picker
-fun pickEditDate(context: Context, onSelected: (String) -> Unit) {
-    val c = Calendar.getInstance()
+//  UNIQUE Edit Date Picker
+fun pickEditDateTime(
+    context: Context,
+    onSelected: (String) -> Unit
+) {
+    val calendar = Calendar.getInstance()
+
     DatePickerDialog(
         context,
-        { _, y, m, d -> onSelected("$d/${m + 1}/$y") },
-        c.get(Calendar.YEAR),
-        c.get(Calendar.MONTH),
-        c.get(Calendar.DAY_OF_MONTH)
+        { _, year, month, dayOfMonth ->
+
+            TimePickerDialog(
+                context,
+                { _, hour, minute ->
+
+                    val selectedCal = Calendar.getInstance().apply {
+                        set(Calendar.YEAR, year)
+                        set(Calendar.MONTH, month)
+                        set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                        set(Calendar.HOUR_OF_DAY, hour)
+                        set(Calendar.MINUTE, minute)
+                    }
+
+                    val format = java.text.SimpleDateFormat(
+                        "dd/MM/yyyy HH:mm",
+                        Locale.getDefault()
+                    )
+
+                    onSelected(format.format(selectedCal.time))
+
+                },
+                calendar.get(Calendar.HOUR_OF_DAY),
+                calendar.get(Calendar.MINUTE),
+                true
+            ).show()
+
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
     ).show()
 }
+

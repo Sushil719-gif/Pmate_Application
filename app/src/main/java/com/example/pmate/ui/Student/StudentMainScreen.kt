@@ -7,15 +7,35 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
+import androidx.compose.ui.platform.LocalContext
+import com.example.pmate.Auth.SessionManager
+
+import kotlinx.coroutines.launch
+
 import com.example.pmate.ui.Student.studentapplications.StudentApplicationsScreen
 import com.example.pmate.ui.Student.studentdashboard.StudentDashboardScreen
 import com.example.pmate.ui.Student.studentjobs.StudentJobsListScreen
-
 import com.example.pmate.ui.Student.studentsettings.StudentSettingsScreen
-
 
 @Composable
 fun StudentMainScreen(navController: NavController) {
+
+    // ▬▬▬ SESSION PROTECTION ▬▬▬
+    val context = LocalContext.current
+    val session = SessionManager(context)
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val isLogged = session.isLoggedIn()
+        val role = session.getUserRole()
+
+        if (!isLogged || role.lowercase() != "student") {
+            navController.navigate("login/student") {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+    // ▬▬▬ END SESSION PROTECTION ▬▬▬
 
     var selectedIndex by remember { mutableStateOf(0) }
 

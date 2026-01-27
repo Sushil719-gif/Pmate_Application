@@ -9,7 +9,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Event
@@ -42,17 +44,22 @@ fun StudentJobsListScreen(
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        scope.launch {
-            jobs = repo.getAllJobs()
-            loading = false
-        }
+        val student = repo.getCurrentStudent()
+        val studentBatch = student.batchYear
+
+        jobs = repo.getAllJobs()
+            .filter { it.batchYear == studentBatch }
+
+        loading = false
     }
+
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFFF7F7F7))
             .padding(16.dp)
+            .verticalScroll(rememberScrollState())
     ) {
 
         Text(
@@ -72,7 +79,7 @@ fun StudentJobsListScreen(
 
                 // Highlight Card (optional)
                 HighlightCard(
-                    title = "Upcoming Interview",
+                    title = "Upcoming Events!",
                     subtitle = "Check your notices",
                     icon = Icons.Default.Event
                 )
@@ -113,27 +120,73 @@ fun JobTile(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(140.dp)
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(6.dp),
-        shape = RoundedCornerShape(16.dp)
-    ) {
+        elevation = CardDefaults.cardElevation(8.dp),
+        shape = RoundedCornerShape(20.dp)
+    )
+    {
 
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
 
-            Text(job.company, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text(job.role, fontSize = 15.sp, color = Color.Gray)
+            // ---------- Top Row ----------
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        job.company,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        job.role,
+                        fontSize = 15.sp,
+                        color = Color.Gray
+                    )
+                }
 
-            Spacer(Modifier.height(12.dp))
+                // Batch Badge
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = Color(0xFFEEE5FF)
+                ) {
+                    Text(
+                        text = "${job.batchYear} Batch",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF5E3BBF)
+                    )
+                }
+            }
 
-            Row(horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Stipend: ${job.stipend}", fontSize = 14.sp)
-                Text("Location: ${job.location}", fontSize = 14.sp)
+            Spacer(Modifier.height(14.dp))
+
+            Divider()
+
+            Spacer(Modifier.height(14.dp))
+
+            // ---------- Bottom Row ----------
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "💰 ${job.stipend}",
+                    fontSize = 14.sp
+                )
+
+                Text(
+                    "📍 ${job.location}",
+                    fontSize = 14.sp
+                )
             }
         }
     }
 }
+
 
 @Composable
 fun HighlightCard(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {

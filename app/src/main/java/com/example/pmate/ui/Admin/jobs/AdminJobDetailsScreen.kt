@@ -5,15 +5,20 @@ package com.example.pmate.ui.Admin.jobs
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.font.FontWeight
-import com.example.pmate.ui.Student.FileItemCard
+import com.example.pmate.ui.Student.studentjobs.FileItemCard
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Money
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -22,12 +27,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.pmate.CommonReusableUIComponents.JobHeader
 import com.example.pmate.Firestore.DataModels.JobModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import com.example.pmate.Navigation.Screen
 
 
 import com.example.pmate.Scrolls.VerticalScrollableScreen
+import com.example.pmate.ui.Student.studentjobs.DetailChip
+import com.example.pmate.ui.Student.studentjobs.DetailSection
+
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,23 +94,107 @@ fun AdminJobDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            Text(j.company, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text(j.role, fontSize = 20.sp, color = Color.Gray)
+            JobHeader(
+                company = j.company,
+                role = j.role,
+                batch = j.batchYear,
+                j.deadline
+            )
 
-            Text("Stipend: ${j.stipend}", fontSize = 16.sp)
-            Text("Location: ${j.location}", fontSize = 16.sp)
-            Text("Deadline: ${j.deadline}", fontSize = 16.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(Modifier.weight(1f)) {
+                    DetailChip(Icons.Default.Money, j.stipend)
+                }
+                Box(Modifier.weight(1f)) {
+                    DetailChip(Icons.Default.LocationOn, j.location)
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(Modifier.weight(1f)) {
+                    DetailChip(Icons.Default.CalendarToday, "${j.batchYear} Batch")
+                }
+                Box(Modifier.weight(1f)) {
+                    DetailChip(
+                        Icons.Default.Person,
+                        if (j.eligibilityType == "ALL")
+                            "Eligibility: All Students"
+                        else
+                            "Eligibility: Unplaced Only"
+                    )
+                }
+            }
+
+
+
+
 
             Divider()
 
-            Text("Job Description", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(j.description)
+            // Job Description Section
+            if (!j.description.isNullOrBlank()) {
 
-            Divider()
+                var descExpanded by remember { mutableStateOf(false) }
 
-            Divider()
+                Text(
+                    "Job Description",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-//  Instructions Section (Expandable for Admin also)
+                Spacer(Modifier.height(8.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(4.dp)
+                ) {
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { descExpanded = !descExpanded }
+                            .padding(16.dp)
+                    ) {
+
+                        Text(
+                            text = if (descExpanded) "Hide Description ▲" else "Show Description ▼",
+                            color = Color(0xFF5E3BBF),
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp
+                        )
+
+                        AnimatedVisibility(visible = descExpanded) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                                j.description
+                                    .split("\n")
+                                    .filter { it.isNotBlank() }
+                                    .forEach { line ->
+                                        Row {
+                                            Text("•  ", fontSize = 15.sp)
+                                            Text(line.trim(), fontSize = 15.sp)
+                                        }
+                                    }
+                            }
+                        }
+                    }
+                }
+
+                Divider()
+            }
+
+
+
+
+//  Instructions Section
             if (!j.instructions.isNullOrBlank()) {
 
                 var expanded by remember { mutableStateOf(false) }
@@ -204,7 +297,8 @@ fun AdminJobDetailsScreen(
             Button(
                 onClick = {
                     scope.launch {
-                        repo.deleteJob(j.jobId)
+                        repo.archiveJob(j.jobId)
+
                         navController.navigate("adminJobs") {
                             popUpTo("adminJobs") { inclusive = false }
                         } // back to AdminJobs

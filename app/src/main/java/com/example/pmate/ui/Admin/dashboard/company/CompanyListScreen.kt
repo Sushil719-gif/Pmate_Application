@@ -23,7 +23,7 @@ data class Company(
 )
 
 @Composable
-fun CompanyListScreen(navController: NavController) {
+fun CompanyListScreen(navController: NavController,batch: String) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val repo = remember { FirestoreRepository() }
@@ -33,7 +33,8 @@ fun CompanyListScreen(navController: NavController) {
 
     LaunchedEffect(Unit) {
         scope.launch {
-            val jobs = repo.getAllJobs()
+            val jobs = repo.getJobsByBatch(batch)
+
 
             // Group by company name
             val grouped = jobs.groupBy { it.company }
@@ -94,8 +95,10 @@ fun CompanyListScreen(navController: NavController) {
                             CompanyItem(
                                 company = company,
                                 navController = navController,
-                                snackbarHostState = snackbarHostState
+                                snackbarHostState = snackbarHostState,
+                                batch = batch
                             )
+
                         }
                     }
                 }
@@ -110,23 +113,25 @@ fun CompanyListScreen(navController: NavController) {
 fun CompanyItem(
     company: Company,
     navController: NavController,
-    snackbarHostState: SnackbarHostState
-) {
+    snackbarHostState: SnackbarHostState,
+    batch: String
+)
+ {
 val scope =rememberCoroutineScope()
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
                 when (company.status) {
-                    "Active" -> navController.navigate("CompanyActiveDetails/${company.name}")
-                    "Completed" -> navController.navigate("CompanyDetails/${company.name}")
+                    "Active" -> navController.navigate("CompanyActiveDetails/${company.name}/$batch")
+                    "Completed" -> navController.navigate("CompanyDetails/${company.name}/$batch")
                     "On Hold" -> {
-                        // show snackbar only when clicked
                         scope.launch {
                             snackbarHostState.showSnackbar("Company is On Hold")
                         }
                     }
                 }
+
             },
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(

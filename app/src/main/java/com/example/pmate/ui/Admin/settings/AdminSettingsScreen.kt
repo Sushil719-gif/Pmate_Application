@@ -5,13 +5,16 @@ package com.example.pmate.ui.Admin.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -19,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import com.example.pmate.data.ThemePreferences
 
 
@@ -42,6 +46,7 @@ fun AdminSettingsScreen(
             .fillMaxSize()
             .background(Color(0xFFF7F7F7))
             .padding(20.dp)
+            .verticalScroll(rememberScrollState())
     ) {
 
         Text(
@@ -105,7 +110,57 @@ fun AdminSettingsScreen(
             icon = Icons.Default.Logout,
             onClick = { navController.navigate("logout_confirm") }
         )
+
+        Spacer(Modifier.height(30.dp))
+
+// ------------------ System Maintenance ------------------
+        SettingsSectionTitle("System Maintenance")
+
+        val repo = remember { FirestoreRepository() }
+
+        var showDeleteDialog by remember { mutableStateOf(false) }
+
+        SettingsOptionCard(
+            title = "Clean Old Batches Data",
+            subtitle = "Delete students, jobs and data older than allowed batches",
+            icon = Icons.Default.Delete,
+            iconTint = Color.Red,
+            titleColor = Color.Red,
+            onClick = { showDeleteDialog = true }
+        )
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Old Batch Data?") },
+                text = {
+                    Text(
+                        "This will permanently delete all students, jobs and related data of batches older than the allowed batches. This action cannot be undone."
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                repo.deleteOldBatchData()
+                                showDeleteDialog = false
+                            }
+                        }
+                    ) {
+                        Text("Delete", color = Color.Red)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+
     }
+
+
 }
 
 
@@ -202,4 +257,5 @@ fun ThemeToggleCard(
             Switch(checked = checked, onCheckedChange = onToggle)
         }
     }
+
 }

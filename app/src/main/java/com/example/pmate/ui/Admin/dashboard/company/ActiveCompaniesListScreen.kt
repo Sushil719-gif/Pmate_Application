@@ -1,20 +1,18 @@
 package com.example.pmate.ui.Admin.dashboard.company
 
-
-
-
-
-import androidx.compose.foundation.layout.*
-
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavController
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
 
 @Composable
-fun CompanyOnHoldListScreen(
+fun ActiveCompaniesListScreen(
     navController: NavController,
     batch: String
 ) {
@@ -25,18 +23,17 @@ fun CompanyOnHoldListScreen(
     LaunchedEffect(batch) {
         scope.launch {
             val jobs = repo.getAllJobs()
-                .filter { it.batchYear == batch && it.status == "On Hold" }
-
+                .filter { it.batchYear == batch && it.status == "Active" }
 
             companies = jobs.map { it.company }.distinct()
         }
     }
 
+
     CompanyAnalyticsList(
-        title = "Companies On Hold",
+        title = "Active Companies",
         companies = companies,
         batch = batch,
-        type= "HOLD"
+        type = "ACTIVE"
     )
 }
-

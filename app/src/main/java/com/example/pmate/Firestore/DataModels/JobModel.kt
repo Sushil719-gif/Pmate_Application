@@ -9,12 +9,17 @@ data class JobModel(
     val jobType: String = "",
     val deadline: String = "",
     val description: String = "",
-    val skills: List<String> = emptyList(),
+
     val files: List<String> = emptyList(),
+    val isActive: Boolean = true,
 
     var instructions: String = "",
 
     val status: String = "Active" ,  // Active | On Hold | Completed
+    val batchYear: String = "",
+    val eligibilityType: String = "UNPLACED_ONLY",
+    val branches: List<String> = emptyList(),
+
 
     val timestamp: Long = System.currentTimeMillis()
 )
