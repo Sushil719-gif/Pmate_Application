@@ -56,6 +56,8 @@ fun JobDetailsScreen(
     val studentBatch = student?.batchYear ?: ""
     val studentStatus = student?.status ?: ""
     val placementStatus = student?.placementStatus ?: ""
+    val studentBranch = student?.branch ?: ""
+
 
 
     // Apply states (MOVED UP)
@@ -105,16 +107,11 @@ fun JobDetailsScreen(
     val eligibilityType = currentJob.eligibilityType
     val isDataReady = job != null && student != null
 
+    val canApply = !alreadyApplied && currentJob.status == "Active"
 
-    val canApply = isDataReady &&
-            !applyLoading &&
-            !alreadyApplied &&
-            studentStatus == "ACTIVE" &&
-            studentBatch == jobBatch &&
-            (
-                    eligibilityType == "ALL" ||
-                            (eligibilityType == "UNPLACED_ONLY" && placementStatus == "UNPLACED")
-                    )
+
+
+
 
 
     val visible by remember { mutableStateOf(true) }
@@ -295,10 +292,13 @@ fun JobDetailsScreen(
             }
 
 
-
-            //Apply section
-
+// Apply section
             if (!isAdmin) {
+
+                val studentBranch = student?.branch ?: ""
+
+
+
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
 
                     if (feedbackMessage.isNotEmpty()) {
@@ -308,7 +308,6 @@ fun JobDetailsScreen(
                             fontSize = 16.sp
                         )
                     }
-
 
                     Button(
                         onClick = {
@@ -327,7 +326,7 @@ fun JobDetailsScreen(
                                 }
                             }
                         },
-                        enabled = !applied && !applyLoading,
+                        enabled = canApply,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(55.dp),
@@ -340,12 +339,18 @@ fun JobDetailsScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         } else {
-                            Text(if (applied) "Applied" else "Apply")
+                            Text(
+                                when {
+                                    applied -> "Applied"
+                                    !canApply -> "Not Eligible"
+                                    else -> "Apply"
+                                }
+                            )
                         }
                     }
-
                 }
             }
+
         }
     }
 }

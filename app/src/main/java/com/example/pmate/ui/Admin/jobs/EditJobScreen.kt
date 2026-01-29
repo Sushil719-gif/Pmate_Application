@@ -56,14 +56,23 @@ fun EditJobScreen(
 
     val j = job ?: return
 
+    // Branch selection
+    val branchOptions = listOf("CSE", "IT", "ECE", "EEE", "MECH", "CIVIL")
+    var selectedBranches by remember { mutableStateOf(j.branches.toSet()) }
+    var branchExpanded by remember { mutableStateOf(false) }
+
+
     // Prefilled states
     var company by remember { mutableStateOf(j.company) }
     var role by remember { mutableStateOf(j.role) }
     var stipend by remember { mutableStateOf(j.stipend) }
     var location by remember { mutableStateOf(j.location) }
+    var batchYear by remember { mutableStateOf(j.batchYear) }
+
     var deadline by remember { mutableStateOf(j.deadline) }
     var description by remember { mutableStateOf(j.description) }
     var instructions by remember { mutableStateOf(j.instructions ?: "") }
+
 
     val jobTypes = listOf("Full-Time", "Internship-based FT", "Internship-Plus FT")
     var selectedJobType by remember { mutableStateOf(j.jobType) }
@@ -90,6 +99,71 @@ fun EditJobScreen(
             EditInputField("Job Role", role) { role = it }
             EditInputField("Stipend / Package", stipend) { stipend = it }
             EditInputField("Location", location) { location = it }
+            BatchYearDropdown(
+                selectedYear = batchYear,
+                onYearSelected = { batchYear = it }
+            )
+
+
+//            Text(
+//                text = "Eligible Branches",
+//                fontWeight = FontWeight.SemiBold,
+//                fontSize = 16.sp
+//            )
+
+            ExposedDropdownMenuBox(
+                expanded = branchExpanded,
+                onExpandedChange = { branchExpanded = !branchExpanded }
+            ) {
+                OutlinedTextField(
+                    value = if (selectedBranches.isEmpty())
+                        "Select Branches"
+                    else
+                        selectedBranches.joinToString(", "),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Branches") },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(branchExpanded)
+                    }
+                )
+
+                ExposedDropdownMenu(
+                    expanded = branchExpanded,
+                    onDismissRequest = { branchExpanded = false }
+                ) {
+                    branchOptions.forEach { branch ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = selectedBranches.contains(branch),
+                                        onCheckedChange = null
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(branch)
+                                }
+                            },
+                            onClick = {
+                                selectedBranches =
+                                    if (selectedBranches.contains(branch))
+                                        selectedBranches - branch
+                                    else
+                                        selectedBranches + branch
+                            }
+                        )
+                    }
+                }
+            }
+
+
+
+
 
             // Job type dropdown
             ExposedDropdownMenuBox(
@@ -179,6 +253,8 @@ fun EditJobScreen(
                         role = role,
                         stipend = stipend,
                         location = location,
+                        batchYear = batchYear,
+                        branches = selectedBranches.toList(),
                         deadline = deadline,
                         jobType = selectedJobType,
                         description = description,
@@ -193,9 +269,7 @@ fun EditJobScreen(
                             "Job edited successfully ",
                             Toast.LENGTH_SHORT
                         ).show()
-                        navController.navigate("job_details_admin/$jobId") {
-                            popUpTo("adminJobs") { inclusive = false }
-                        }
+                        navController.popBackStack()
                     }
                 },
                 modifier = Modifier

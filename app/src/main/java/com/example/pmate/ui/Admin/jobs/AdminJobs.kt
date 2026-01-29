@@ -28,6 +28,7 @@ fun AdminJobs(
     batch: String,
     modifier: Modifier = Modifier
 )
+
  {
 
     val repo = remember { FirestoreRepository() }
@@ -36,11 +37,21 @@ fun AdminJobs(
     val scope = rememberCoroutineScope()
 
      LaunchedEffect(batch) {
+         loading = true
+
          repo.listenAllJobs { updatedJobs ->
-             jobList = updatedJobs.filter { it.batchYear == batch }
+             jobList = updatedJobs.filter {
+                 it.batchYear == batch && it.active
+             }
+
+
+
              loading = false
          }
      }
+
+
+
 
 
 
@@ -57,8 +68,9 @@ fun AdminJobs(
         ) {
 
             // Title
-            Text(
-                "All Jobs — Batch $batch",
+            Text("Jobs — Batch $batch",
+
+
 
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
@@ -101,9 +113,10 @@ fun AdminJobs(
         }
 
         // ----------- Floating Button (Free Floating, Not in container) -----------
-        FloatingActionButton(
-            onClick = { navController.navigate("addJob") },
-            modifier = Modifier
+         FloatingActionButton(
+             onClick = { navController.navigate("addJob/$batch") },
+
+             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(20.dp),
             containerColor = MaterialTheme.colorScheme.primary
@@ -145,18 +158,14 @@ fun JobListCard(job: JobModel, onClick: () -> Unit) {
 
 
             Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Branches: ${job.branches.joinToString(", ")}",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF6750A4)
+            )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Default.Money, contentDescription = null, tint = Color(0xFF6750A4))
-                Text(job.stipend)
-            }
 
-            Spacer(Modifier.height(4.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF6750A4))
-                Text(job.location)
-            }
 
             Spacer(Modifier.height(8.dp))
 

@@ -8,9 +8,13 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavHost
+import androidx.navigation.compose.rememberNavController
 import com.example.pmate.Auth.SessionManager
+import androidx.navigation.compose.*
 
-import kotlinx.coroutines.launch
+
+
 
 import com.example.pmate.ui.Student.studentapplications.StudentApplicationsScreen
 import com.example.pmate.ui.Student.studentdashboard.StudentDashboardScreen
@@ -20,10 +24,8 @@ import com.example.pmate.ui.Student.studentsettings.StudentSettingsScreen
 @Composable
 fun StudentMainScreen(navController: NavController) {
 
-    // ▬▬▬ SESSION PROTECTION ▬▬▬
     val context = LocalContext.current
     val session = SessionManager(context)
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         val isLogged = session.isLoggedIn()
@@ -35,33 +37,52 @@ fun StudentMainScreen(navController: NavController) {
             }
         }
     }
-    // ▬▬▬ END SESSION PROTECTION ▬▬▬
 
+    val studentNavController = rememberNavController()
     var selectedIndex by remember { mutableStateOf(0) }
 
-    val tabs = listOf("Dashboard", "Jobs", "Applications", "Settings")
+    val tabs = listOf("dashboard", "jobs", "applications", "settings")
     val icons = listOf(Icons.Default.Home, Icons.Default.Work, Icons.Default.List, Icons.Default.Settings)
 
     Scaffold(
         bottomBar = {
             NavigationBar {
-                tabs.forEachIndexed { index, title ->
+                tabs.forEachIndexed { index, route ->
                     NavigationBarItem(
                         selected = selectedIndex == index,
-                        onClick = { selectedIndex = index },
-                        icon = { Icon(icons[index], contentDescription = title) },
-                        label = { Text(title) }
+                        onClick = {
+                            selectedIndex = index
+                            studentNavController.navigate(route)
+                        },
+                        icon = { Icon(icons[index], null) },
+                        label = { Text(route.replaceFirstChar { it.uppercase() }) }
                     )
                 }
             }
         }
     ) { padding ->
 
-        when (selectedIndex) {
-            0 -> StudentDashboardScreen(modifier = Modifier.padding(padding), navController)
-            1 -> StudentJobsListScreen(modifier = Modifier.padding(padding), navController)
-            2 -> StudentApplicationsScreen(modifier = Modifier.padding(padding), navController)
-            3 -> StudentSettingsScreen(modifier = Modifier.padding(padding), navController)
+        NavHost(
+            navController = studentNavController,
+            startDestination = "dashboard",
+            modifier = Modifier.padding(padding)
+        ) {
+
+            composable("dashboard") {
+                StudentDashboardScreen(navController = navController)
+            }
+
+            composable("jobs") {
+                StudentJobsListScreen(navController = navController)
+            }
+
+            composable("applications") {
+                StudentApplicationsScreen(navController = navController)
+            }
+
+            composable("settings") {
+                StudentSettingsScreen(navController = navController)
+            }
         }
     }
 }

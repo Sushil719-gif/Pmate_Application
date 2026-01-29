@@ -25,7 +25,9 @@ import androidx.compose.ui.text.input.ImeAction
 fun PlacedStudentsScreen(
     navController: NavController,
     batch: String
-) {
+
+)
+{
 
     val repo = remember { FirestoreRepository() }
     val scope = rememberCoroutineScope()
@@ -36,10 +38,10 @@ fun PlacedStudentsScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(batch) {
-        scope.launch {
-            data = repo.getPlacedStudentsWithCompanies(batch)
-        }
+        data = repo.getPlacedStudentsWithCompanies(batch)
     }
+
+
 
     val filtered = data.filter { (student, companies) ->
         student.name.contains(searchQuery, true) ||
@@ -54,6 +56,7 @@ fun PlacedStudentsScreen(
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
+
 
         Spacer(Modifier.height(12.dp))
 

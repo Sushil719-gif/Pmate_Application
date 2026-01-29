@@ -35,6 +35,7 @@ import com.example.pmate.ui.Admin.dashboard.company.CompanyOnHoldListScreen
 import com.example.pmate.ui.Admin.dashboard.company.CompletedCompaniesListScreen
 
 import com.example.pmate.ui.Admin.dashboard.company.PlacedStudentsScreen
+import com.example.pmate.ui.Admin.jobs.JobActionScreen
 import com.example.pmate.ui.Admin.settings.UpdateProfileScreen
 
 
@@ -94,9 +95,19 @@ fun AppNavigation(navController: NavHostController) {
 
 
 
+
+
         // JOB SCREENS
-        composable("addJob") { AddJobScreen(navController) }
-        composable("adminJobs") { "adminJobs/{batch}" }
+        composable("addJob/{batch}") {
+            val batch = it.arguments?.getString("batch")!!
+            AddJobScreen(navController, batch)
+        }
+
+
+        composable("adminJobs/{batch}") {
+            val batch = it.arguments?.getString("batch")!!
+            AdminJobs(navController, batch)
+        }
 
         composable(
             route = "job_details_admin/{jobId}",
@@ -111,11 +122,20 @@ fun AppNavigation(navController: NavHostController) {
             EditJobScreen(navController, id)
         }
 
+
         composable("applicants/{jobId}") {
             val id = it.arguments?.getString("jobId")!!
             ApplicantsListScreen(navController, id)
         }
 
+//navigation to delete/archive jobs
+        composable(
+            route = "job_action/{jobId}",
+            arguments = listOf(navArgument("jobId") { type = NavType.StringType })
+        ) {
+            val jobId = it.arguments?.getString("jobId")!!
+            JobActionScreen(navController, jobId)
+        }
 
 
         composable(
@@ -133,34 +153,33 @@ fun AppNavigation(navController: NavHostController) {
 
         // ------------------ COMPANY DASHBOARD ------------------
 
-        composable("CompanyList/{batch}") { backStackEntry ->
-            val batch = backStackEntry.arguments?.getString("batch") ?: ""
+        composable("CompanyList/{batch}") { backStack ->
+            val batch = backStack.arguments?.getString("batch")!!
             CompanyListScreen(navController, batch)
         }
 
+
+
         composable("ActiveCompanies/{batch}") { backStack ->
             val batch = backStack.arguments?.getString("batch")!!
-            ActiveCompaniesListScreen(
-                navController = navController,
-                batch = batch
-            )
+            ActiveCompaniesListScreen(navController, batch)
         }
+
+
 
         composable("HoldCompanies/{batch}") { backStack ->
             val batch = backStack.arguments?.getString("batch")!!
-            CompanyOnHoldListScreen(
-                navController = navController,
-                batch = batch
-            )
+            CompanyOnHoldListScreen(navController, batch)
         }
+
+
 
         composable("CompletedCompanies/{batch}") { backStack ->
             val batch = backStack.arguments?.getString("batch")!!
-            CompletedCompaniesListScreen(
-                navController = navController,
-                batch = batch
-            )
+            CompletedCompaniesListScreen(navController, batch)
         }
+
+
 
 
 
@@ -170,6 +189,8 @@ fun AppNavigation(navController: NavHostController) {
             val batch = it.arguments?.getString("batch")!!
             SendNoticeScreen(navController, batch)
         }
+
+
 
         composable("AllNoticesAdmin") {
             AllNoticesAdminScreen(navController)

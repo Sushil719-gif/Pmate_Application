@@ -41,17 +41,30 @@ fun StudentJobsListScreen(
     var jobs by remember { mutableStateOf<List<JobModel>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
 
-    val scope = rememberCoroutineScope()
+
 
     LaunchedEffect(Unit) {
+        loading = true
+
         val student = repo.getCurrentStudent()
         val studentBatch = student.batchYear
 
-        jobs = repo.getAllJobs()
-            .filter { it.batchYear == studentBatch }
 
-        loading = false
+        repo.listenAllJobs { allJobs ->
+
+            jobs = allJobs.filter { job ->
+                job.batchYear == studentBatch &&
+                        job.active
+            }
+
+
+
+
+            loading = false
+        }
     }
+
+
 
 
     Column(
@@ -123,31 +136,21 @@ fun JobTile(
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(8.dp),
         shape = RoundedCornerShape(20.dp)
-    )
-    {
-
+    ) {
         Column(modifier = Modifier.padding(18.dp)) {
 
-            // ---------- Top Row ----------
+            // ---------- Top ----------
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        job.company,
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        job.role,
-                        fontSize = 15.sp,
-                        color = Color.Gray
-                    )
+                    Text(job.company, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    Text(job.role, fontSize = 15.sp, color = Color.Gray)
                 }
 
-                // Batch Badge
+                // Batch Badge (keep highlight)
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = Color(0xFFEEE5FF)
@@ -162,30 +165,51 @@ fun JobTile(
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
-
+            Spacer(Modifier.height(12.dp))
             Divider()
+            Spacer(Modifier.height(12.dp))
 
-            Spacer(Modifier.height(14.dp))
+            // ---------- Branches ----------
+            Text(
+                text = "Eligible Branches",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
 
-            // ---------- Bottom Row ----------
+            Text(
+                text = job.branches.joinToString(", "),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF5E3BBF)
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            // ---------- Deadline (keep red) ----------
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("⏰ Deadline: ", fontSize = 13.sp, color = Color.Gray)
+                Text(
+                    job.deadline,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.Red
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // ---------- Bottom ----------
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    "💰 ${job.stipend}",
-                    fontSize = 14.sp
-                )
-
-                Text(
-                    "📍 ${job.location}",
-                    fontSize = 14.sp
-                )
+                Text("💰 ${job.stipend}", fontSize = 14.sp)
+                Text("📍 ${job.location}", fontSize = 14.sp)
             }
         }
     }
 }
+
 
 
 @Composable

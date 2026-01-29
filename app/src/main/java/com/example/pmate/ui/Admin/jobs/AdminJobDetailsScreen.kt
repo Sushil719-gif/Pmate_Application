@@ -2,6 +2,7 @@ package com.example.pmate.ui.Admin.jobs
 
 
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.font.FontWeight
@@ -23,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -49,7 +51,10 @@ fun AdminJobDetailsScreen(
     val repo = remember { FirestoreRepository() }
     var job by remember { mutableStateOf<JobModel?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         scope.launch {
@@ -295,23 +300,17 @@ fun AdminJobDetailsScreen(
 
             // DELETE BUTTON
             Button(
-                onClick = {
-                    scope.launch {
-                        repo.archiveJob(j.jobId)
-
-                        navController.navigate("adminJobs") {
-                            popUpTo("adminJobs") { inclusive = false }
-                        } // back to AdminJobs
-                    }
-                },
+                onClick = { navController.navigate("job_action/${j.jobId}") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB00020)),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text("Delete Job", color = Color.White)
+                Text("Delete / Archive", color = Color.White)
             }
+
+
         }
     }
 }

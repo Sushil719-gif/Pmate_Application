@@ -12,10 +12,13 @@ import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
 
 @Composable
+
 fun SendNoticeScreen(
     navController: NavController,
     batch: String
-) {
+
+)
+ {
 
     val repo = remember { FirestoreRepository() }
     val scope = rememberCoroutineScope()
@@ -43,6 +46,7 @@ fun SendNoticeScreen(
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
+
 
         Spacer(Modifier.height(20.dp))
 
@@ -132,6 +136,8 @@ fun SendNoticeScreen(
                     isLoading = true
                     scope.launch {
                         repo.addNotice(title, message, batch, validDays, level)
+
+
                         isLoading = false
                         navController.popBackStack()
                     }

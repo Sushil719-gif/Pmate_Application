@@ -13,6 +13,7 @@ import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
 
 @Composable
+
 fun CompletedCompaniesListScreen(
     navController: NavController,
     batch: String
@@ -24,13 +25,14 @@ fun CompletedCompaniesListScreen(
     LaunchedEffect(batch) {
         scope.launch {
             val jobs = repo.getAllJobs()
-                .filter { it.batchYear == batch && it.status == "Completed" }
-
+                .filter {
+                    it.batchYear == batch &&
+                            it.status == "Completed"
+                }
 
             companies = jobs.map { it.company }.distinct()
         }
     }
-
 
     CompanyAnalyticsList(
         title = "Completed Companies",

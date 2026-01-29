@@ -14,13 +14,13 @@ import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
 
 @Composable
+
 fun CompanyAnalyticsList(
     title: String,
     companies: List<String>,
     batch: String,
-    type: String   // "ACTIVE" | "HOLD" | "COMPLETED"
-)
- {
+    type: String
+) {
     val repo = remember { FirestoreRepository() }
     val scope = rememberCoroutineScope()
 
@@ -30,12 +30,14 @@ fun CompanyAnalyticsList(
 
     var loading by remember { mutableStateOf(true) }
 
-    // ✅ Fetch everything once
-    LaunchedEffect(companies) {
+    LaunchedEffect(companies, batch) {
         scope.launch {
             val list = mutableListOf<CompanyAnalytics>()
             companies.forEach { company ->
-                val data = repo.getCompanyAnalytics(company, batch)
+                val data = repo.getCompanyAnalytics(
+                    company = company,
+                    batch = batch
+                )
                 list.add(data)
             }
             analyticsList = list
@@ -64,13 +66,14 @@ fun CompanyAnalyticsList(
             else -> {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(analyticsList) { data ->
-                        CompanyAnalyticsCard(data,type)
+                        CompanyAnalyticsCard(data, type)
                     }
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun CompanyAnalyticsCard(

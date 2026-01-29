@@ -9,10 +9,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.pmate.Auth.SessionManager
-
-import kotlinx.coroutines.launch
-
 import com.example.pmate.ui.Admin.dashboard.AdminDashboardScreen
 import com.example.pmate.ui.Admin.jobs.AdminJobs
 import com.example.pmate.ui.Admin.settings.AdminSettingsScreen
@@ -26,6 +26,8 @@ fun AdminMainScreen(navController: NavController) {
     val session = SessionManager(context)
     val currentYear = Calendar.getInstance().get(Calendar.YEAR).toString()
     var selectedBatch by rememberSaveable { mutableStateOf(currentYear) }
+
+
 
 
 
@@ -46,13 +48,22 @@ fun AdminMainScreen(navController: NavController) {
     val tabs = listOf("Dashboard", "Jobs", "Settings")
     val icons = listOf(Icons.Default.Home, Icons.Default.Work, Icons.Default.Settings)
 
+    val adminNavController = rememberNavController()
+
     Scaffold(
         bottomBar = {
             NavigationBar {
                 tabs.forEachIndexed { index, title ->
                     NavigationBarItem(
                         selected = selectedIndex == index,
-                        onClick = { selectedIndex = index },
+                        onClick = {
+                            selectedIndex = index
+                            when (index) {
+                                0 -> adminNavController.navigate("dashboard")
+                                1 -> adminNavController.navigate("jobs")
+                                2 -> adminNavController.navigate("settings")
+                            }
+                        },
                         icon = { Icon(icons[index], contentDescription = null) },
                         label = { Text(title) }
                     )
@@ -61,23 +72,33 @@ fun AdminMainScreen(navController: NavController) {
         }
     ) { padding ->
 
-        when (selectedIndex) {
-            0 -> AdminDashboardScreen(
-                navController = navController,
-                selectedBatch = selectedBatch,
-                onBatchChange = { selectedBatch = it }
-            )
+        NavHost(
+            navController = adminNavController,
+            startDestination = "dashboard",
+            modifier = Modifier.padding(padding)
+        ) {
 
-            1 -> AdminJobs(
-                navController = navController,
-                batch = selectedBatch,
-                modifier = Modifier.padding(padding)
-            )
-            2 -> AdminSettingsScreen(
-                modifier = Modifier.padding(padding),
-                navController = navController
-            )
+            composable("dashboard") {
+                AdminDashboardScreen(
+                    navController = navController,
+                    selectedBatch = selectedBatch,
+                    onBatchChange = { selectedBatch = it }
+                )
+            }
+
+            composable("jobs") {
+                AdminJobs(
+                    navController = navController,
+                    batch = selectedBatch
+                )
+            }
+
+            composable("settings") {
+                AdminSettingsScreen(
+                    navController = navController
+                )
+            }
         }
-
     }
+
 }

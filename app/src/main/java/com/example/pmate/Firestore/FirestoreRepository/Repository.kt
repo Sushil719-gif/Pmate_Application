@@ -11,6 +11,7 @@ import com.example.pmate.Firestore.DataModels.UserModel
 import com.example.pmate.ThreeBatchesAccess.BatchUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+
 import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 
@@ -227,7 +228,8 @@ class FirestoreRepository {
         batch: String,
         validDays: Int,
         level: String
-    ) {
+    )
+    {
 
         val now = System.currentTimeMillis()
 
@@ -515,15 +517,25 @@ fun listenStudentApplications(
             }
     }
 
+    // permanent delete
+
+    suspend fun deleteJobPermanently(jobId: String) {
+        db.collection("jobs")
+            .document(jobId)
+            .delete()
+            .await()
+    }
+
 
     //Archive jobs(soft delete)
 
     suspend fun archiveJob(jobId: String) {
         db.collection("jobs")
             .document(jobId)
-            .update("isActive", false)
+            .update("active", false)
             .await()
     }
+
 
     suspend fun getStudentsByBatch(batch: String): List<StudentModel> {
         val snapshot = db.collection("students")
@@ -668,12 +680,13 @@ fun listenStudentApplications(
     }
 
 
+
+
 // to reflect instantly in same screen UI when the status job status is changed...........
 
     fun listenAllJobs(onUpdate: (List<JobModel>) -> Unit) {
 
         db.collection("jobs")
-            .whereNotEqualTo("status", "Archived")
             .addSnapshotListener { snapshot, _ ->
 
                 if (snapshot != null) {
@@ -684,6 +697,7 @@ fun listenStudentApplications(
                 }
             }
     }
+
 
     //student dashboard..........
 

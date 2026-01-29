@@ -25,8 +25,10 @@ fun CompanyOnHoldListScreen(
     LaunchedEffect(batch) {
         scope.launch {
             val jobs = repo.getAllJobs()
-                .filter { it.batchYear == batch && it.status == "On Hold" }
-
+                .filter {
+                    it.batchYear == batch &&
+                            it.status == "On Hold"
+                }
 
             companies = jobs.map { it.company }.distinct()
         }
@@ -36,7 +38,6 @@ fun CompanyOnHoldListScreen(
         title = "Companies On Hold",
         companies = companies,
         batch = batch,
-        type= "HOLD"
+        type = "HOLD"
     )
 }
-

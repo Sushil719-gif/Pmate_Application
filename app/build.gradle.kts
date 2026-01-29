@@ -46,48 +46,45 @@ android {
 }
 
 dependencies {
+
+    // ---------- CORE ----------
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
+    // ---------- COMPOSE BOM ----------
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    // Navigation
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    // ---------- NAVIGATION ----------
+    implementation(libs.androidx.navigation.compose)
 
-    // Icons
+    // ---------- ICONS ----------
     implementation("androidx.compose.material:material-icons-extended")
 
-    // -----------------------------
-    //  FIREBASE
-    // -----------------------------
+    // ---------- FIREBASE (BOM CONTROLLED) ----------
     implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
-    // -----------------------------
+    implementation("com.google.firebase:firebase-storage-ktx")
 
-    implementation("com.google.firebase:firebase-storage-ktx:20.3.0")
-    implementation("com.google.firebase:firebase-firestore-ktx:24.9.1")
-
+    // ---------- COROUTINES ----------
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.1")
 
+    // ---------- DATASTORE ----------
+    implementation("androidx.datastore:datastore-preferences:1.1.0")
+    implementation("androidx.datastore:datastore-core:1.1.0")
+
+    // ---------- TEST ----------
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
-    //DataStore
-    implementation ("androidx.datastore:datastore-preferences:1.1.0")
-    implementation ("androidx.datastore:datastore-core:1.1.0")
-
-    //Firebase
-    implementation("com.google.firebase:firebase-auth-ktx")
-
-
 }

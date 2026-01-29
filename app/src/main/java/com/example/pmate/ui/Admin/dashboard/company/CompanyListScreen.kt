@@ -23,7 +23,11 @@ data class Company(
 )
 
 @Composable
-fun CompanyListScreen(navController: NavController,batch: String) {
+fun CompanyListScreen(
+    navController: NavController,
+    batch: String
+)
+{
 
     val snackbarHostState = remember { SnackbarHostState() }
     val repo = remember { FirestoreRepository() }
@@ -31,9 +35,12 @@ fun CompanyListScreen(navController: NavController,batch: String) {
     var loading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(batch) {
         scope.launch {
-            val jobs = repo.getJobsByBatch(batch)
+            val jobs = repo.getAllJobs()
+                .filter { it.batchYear == batch }
+
+
 
 
             // Group by company name
@@ -99,6 +106,8 @@ fun CompanyListScreen(navController: NavController,batch: String) {
                                 batch = batch
                             )
 
+
+
                         }
                     }
                 }
@@ -116,6 +125,8 @@ fun CompanyItem(
     snackbarHostState: SnackbarHostState,
     batch: String
 )
+
+
  {
 val scope =rememberCoroutineScope()
     Card(
@@ -125,6 +136,7 @@ val scope =rememberCoroutineScope()
                 when (company.status) {
                     "Active" -> navController.navigate("CompanyActiveDetails/${company.name}/$batch")
                     "Completed" -> navController.navigate("CompanyDetails/${company.name}/$batch")
+
                     "On Hold" -> {
                         scope.launch {
                             snackbarHostState.showSnackbar("Company is On Hold")

@@ -11,13 +11,15 @@ data class JobModel(
     val description: String = "",
 
     val files: List<String> = emptyList(),
-    val isActive: Boolean = true,
+    val active: Boolean = true,
+
 
     var instructions: String = "",
 
     val status: String = "Active" ,  // Active | On Hold | Completed
     val batchYear: String = "",
     val eligibilityType: String = "UNPLACED_ONLY",
+
     val branches: List<String> = emptyList(),
 
 

@@ -23,12 +23,14 @@ fun ActiveCompaniesListScreen(
     LaunchedEffect(batch) {
         scope.launch {
             val jobs = repo.getAllJobs()
-                .filter { it.batchYear == batch && it.status == "Active" }
+                .filter {
+                    it.batchYear == batch &&
+                            it.status == "Active"
+                }
 
             companies = jobs.map { it.company }.distinct()
         }
     }
-
 
     CompanyAnalyticsList(
         title = "Active Companies",

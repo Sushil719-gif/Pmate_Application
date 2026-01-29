@@ -28,13 +28,17 @@ fun AdminDashboardScreen(
     selectedBatch: String,
     onBatchChange: (String) -> Unit
 )
+
+
+
  {
 
 
     val batchOptions = BatchUtils.getAllowedBatches()
 
 
-    var batchMenuExpanded by remember { mutableStateOf(false) }
+
+     var batchMenuExpanded by remember { mutableStateOf(false) }
 
 
     Column(
@@ -54,27 +58,36 @@ fun AdminDashboardScreen(
         Spacer(Modifier.height(12.dp))
 
         // -------- Batch Selector --------
-        Box {
-            OutlinedButton(onClick = { batchMenuExpanded = true }) {
-                Text("Batch: $selectedBatch")
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
 
-            DropdownMenu(
-                expanded = batchMenuExpanded,
-                onDismissRequest = { batchMenuExpanded = false }
-            ) {
-                batchOptions.forEach { year ->
-                    DropdownMenuItem(
-                        text = { Text(year) },
-                        onClick = {
-                            onBatchChange(year)
+            // Batch
+            Box(modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = { batchMenuExpanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Batch: $selectedBatch")
+                }
 
-                            batchMenuExpanded = false
-                        }
-                    )
+                DropdownMenu(
+                    expanded = batchMenuExpanded,
+                    onDismissRequest = { batchMenuExpanded = false }
+                ) {
+                    batchOptions.forEach { year ->
+                        DropdownMenuItem(
+                            text = { Text(year) },
+                            onClick = {
+                                onBatchChange(year)
+                                batchMenuExpanded = false
+                            }
+                        )
+                    }
                 }
             }
+
+
         }
+
 
         Spacer(Modifier.height(20.dp))
 
@@ -83,6 +96,7 @@ fun AdminDashboardScreen(
         Spacer(Modifier.height(12.dp))
         StudentSection(navController, selectedBatch)
 
+
         Spacer(Modifier.height(25.dp))
 
         // ---------- COMPANY SECTION ----------
@@ -90,12 +104,14 @@ fun AdminDashboardScreen(
         Spacer(Modifier.height(12.dp))
         CompanySection(navController, selectedBatch)
 
+
         Spacer(Modifier.height(25.dp))
 
         // ---------- NOTICE BOARD SECTION ----------
         Text("Notice Board", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(12.dp))
         NoticeBoardSection(navController, selectedBatch)
+
     }
 }
 
@@ -104,7 +120,12 @@ fun AdminDashboardScreen(
 // ------------------------ STUDENT SECTION ------------------------
 
 @Composable
-fun StudentSection(navController: NavController, batch: String) {
+fun StudentSection(
+    navController: NavController,
+    batch: String
+)
+
+ {
 
     val repo = remember { FirestoreRepository() }
     var total by remember { mutableStateOf(0) }
@@ -112,17 +133,19 @@ fun StudentSection(navController: NavController, batch: String) {
     var notPlaced by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(batch) {
-        scope.launch {
-            val students = repo.getStudentsByBatch(batch)
+     LaunchedEffect(batch) {
+         scope.launch {
+             val students = repo.getStudentsByBatch(batch)
 
-            total = students.size
-            placed = students.count { it.placementStatus == "PLACED" }
-            notPlaced = students.count { it.placementStatus != "PLACED" }
-        }
-    }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+             total = students.size
+             placed = students.count { it.placementStatus == "PLACED" }
+             notPlaced = students.count { it.placementStatus != "PLACED" }
+         }
+     }
+
+
+     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
         DashboardCard(
             title = "Total Students",
@@ -141,13 +164,14 @@ fun StudentSection(navController: NavController, batch: String) {
                 modifier = Modifier.weight(1f)
             ) {
                 navController.navigate("PlacedStudents/$batch")
+
             }
 
             DashboardCard(
                 title = "Not Placed",
                 value = notPlaced.toString(),
                 modifier = Modifier.weight(1f)
-            ) 
+            )
         }
     }
 }
@@ -157,7 +181,11 @@ fun StudentSection(navController: NavController, batch: String) {
 // ------------------------ COMPANY SECTION ------------------------
 
 @Composable
-fun CompanySection(navController: NavController, batch: String) {
+fun CompanySection(
+    navController: NavController,
+    batch: String
+)
+ {
 
     val repo = remember { FirestoreRepository() }
     var totalCompanies by remember { mutableStateOf(0) }
@@ -166,19 +194,22 @@ fun CompanySection(navController: NavController, batch: String) {
     var completedCount by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(batch) {
-        scope.launch {
-            val jobs = repo.getAllJobs()
-                .filter { it.batchYear == batch }
+     LaunchedEffect(batch) {
+         scope.launch {
+             val jobs = repo.getAllJobs()
+                 .filter {
+                     it.batchYear == batch
+                 }
 
-            val grouped = jobs.groupBy { it.company }
+             val grouped = jobs.groupBy { it.company }
 
-            totalCompanies = grouped.size
-            activeCount = jobs.count { it.status == "Active" }
-            holdCount = jobs.count { it.status == "On Hold" }
-            completedCount = jobs.count { it.status == "Completed" }
-        }
-    }
+             totalCompanies = grouped.size
+             activeCount = jobs.count { it.status == "Active" }
+             holdCount = jobs.count { it.status == "On Hold" }
+             completedCount = jobs.count { it.status == "Completed" }
+         }
+     }
+
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
@@ -220,7 +251,11 @@ fun CompanySection(navController: NavController, batch: String) {
 // ------------------------ NOTICE BOARD SECTION ------------------------
 
 @Composable
-fun NoticeBoardSection(navController: NavController, batch: String) {
+fun NoticeBoardSection(
+    navController: NavController,
+    batch: String
+)
+ {
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
@@ -229,6 +264,7 @@ fun NoticeBoardSection(navController: NavController, batch: String) {
             value = "",
         ) {
             navController.navigate("SendNotice/$batch")
+
         }
 
         DashboardCard(

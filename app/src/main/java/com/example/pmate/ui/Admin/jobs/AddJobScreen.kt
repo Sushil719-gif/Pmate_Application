@@ -33,12 +33,14 @@ import java.util.*
 @Composable
 fun AddJobScreen(
     navController: NavController,
+    batch: String,
     repository: FirestoreRepository = FirestoreRepository()
 ) {
 
     // STATES
     var company by remember { mutableStateOf("") }
-    var batchYear by remember { mutableStateOf("") }
+    var batchYear by remember { mutableStateOf(batch) }
+
 
 
     var role by remember { mutableStateOf("") }
@@ -54,6 +56,12 @@ fun AddJobScreen(
 
     var instructions by remember { mutableStateOf("") }
 
+    // Branch selection
+    val branchOptions = listOf("CSE", "IT", "ECE", "EEE", "MECH", "CIVIL")
+    var selectedBranches by remember { mutableStateOf(setOf<String>()) }
+    var branchExpanded by remember { mutableStateOf(false) }
+
+
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -62,7 +70,7 @@ fun AddJobScreen(
 
     val eligibilityOptions = listOf(
         "Unplaced Students Only",
-        "All Students (Backup Offer)"
+        "All Students"
     )
 
     var selectedEligibility by remember {
@@ -104,10 +112,74 @@ fun AddJobScreen(
             InputField("Job Role", role) { role = it }
             InputField("Stipend / Package", stipend) { stipend = it }
             InputField("Location", location) { location = it }
+
+            // to select bactch..............
+
             BatchYearDropdown(
                 selectedYear = batchYear,
                 onYearSelected = { batchYear = it }
             )
+
+            // To select eligible branches.............
+
+//            Text(
+//                text = "Eligible Branches",
+//                fontWeight = FontWeight.SemiBold,
+//                fontSize = 16.sp
+//            )
+
+            ExposedDropdownMenuBox(
+                expanded = branchExpanded,
+                onExpandedChange = { branchExpanded = !branchExpanded }
+            ) {
+                OutlinedTextField(
+                    value = if (selectedBranches.isEmpty())
+                        "Select Branches"
+                    else
+                        selectedBranches.joinToString(", "),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Branches") },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(branchExpanded)
+                    }
+                )
+
+                ExposedDropdownMenu(
+                    expanded = branchExpanded,
+                    onDismissRequest = { branchExpanded = false }
+                ) {
+                    branchOptions.forEach { branch ->
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = selectedBranches.contains(branch),
+                                        onCheckedChange = null
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(branch)
+                                }
+                            },
+                            onClick = {
+                                selectedBranches =
+                                    if (selectedBranches.contains(branch))
+                                        selectedBranches - branch
+                                    else
+                                        selectedBranches + branch
+                            }
+                        )
+                    }
+                }
+            }
+
+
+
 
 
 
@@ -249,7 +321,11 @@ fun AddJobScreen(
 
                     if (company.isBlank() || role.isBlank() || stipend.isBlank() ||
                         location.isBlank() || deadline.isBlank() || description.isBlank()
+                        || batchYear.isBlank() || selectedBranches.isEmpty()
+
+
                     ) return@Button
+
 
                     loading = true
 
@@ -274,13 +350,14 @@ fun AddJobScreen(
                             description = description,
                             instructions = instructions,
                             batchYear = batchYear,
+                            branches = selectedBranches.toList(),
                             eligibilityType = if (selectedEligibility == "All Students")
                                 "ALL"
                             else
                                 "UNPLACED_ONLY",
-
                             files = uploadedUrls
                         )
+
 
                         // Save Job to Firestore
                         val jobId = repository.addJob(job)
@@ -296,7 +373,7 @@ fun AddJobScreen(
                             ).show()
 
                             navController.popBackStack()
-                            navController.navigate("adminJobs")
+
                         }
 
                     }
