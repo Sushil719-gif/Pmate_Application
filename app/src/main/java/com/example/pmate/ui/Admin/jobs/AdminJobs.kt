@@ -14,10 +14,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.Firestore.DataModels.JobModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
@@ -31,8 +34,12 @@ fun AdminJobs(
 
  {
 
-    val repo = remember { FirestoreRepository() }
-    var jobList by remember { mutableStateOf<List<JobModel>>(emptyList()) }
+     val context = LocalContext.current
+     val session = LocalSessionManager.current
+
+     val repo = remember { FirestoreRepository(session) }
+
+     var jobList by remember { mutableStateOf<List<JobModel>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
 
@@ -196,8 +203,14 @@ fun JobListCard(job: JobModel, onClick: () -> Unit) {
 
 @Composable
 fun StatusDialog(job: JobModel, onDismiss: () -> Unit) {
-    val repo = FirestoreRepository()
+
+    val context = LocalContext.current
+    val session = LocalSessionManager.current
+
+    val repo = remember { FirestoreRepository(session) }
+
     val scope = rememberCoroutineScope()
+
 
     AlertDialog(
         onDismissRequest = onDismiss,

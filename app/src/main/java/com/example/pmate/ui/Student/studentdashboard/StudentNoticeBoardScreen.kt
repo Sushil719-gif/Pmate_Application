@@ -9,10 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.Firestore.DataModels.NoticeModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 
@@ -26,7 +29,11 @@ fun StudentNoticeBoardScreen(
     modifier: Modifier = Modifier
 ) {
 
-    val repo = remember { FirestoreRepository() }
+    val context = LocalContext.current
+    val session = LocalSessionManager.current
+
+    val repo = remember { FirestoreRepository(session) }
+
     var notices by remember { mutableStateOf<List<NoticeModel>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()

@@ -5,6 +5,7 @@ package com.example.pmate.ui.Student.studentjobs
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 
@@ -20,10 +21,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.Firestore.DataModels.JobModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
@@ -37,9 +41,15 @@ fun StudentJobsListScreen(
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
-    val repo = remember { FirestoreRepository() }
+    val context = LocalContext.current
+    val session = LocalSessionManager.current
+    val scope = rememberCoroutineScope()
+
+    val repo = remember { FirestoreRepository(session) }
+
     var jobs by remember { mutableStateOf<List<JobModel>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var lastVisit by remember { mutableStateOf(0L) }
 
 
 
@@ -49,20 +59,25 @@ fun StudentJobsListScreen(
         val student = repo.getCurrentStudent()
         val studentBatch = student.batchYear
 
+        // 1⃣ Read old visit time ONCE
+        lastVisit = session.getLastJobsVisit()
 
         repo.listenAllJobs { allJobs ->
-
             jobs = allJobs.filter { job ->
-                job.batchYear == studentBatch &&
-                        job.active
+                job.batchYear == studentBatch && job.active
             }
-
-
-
-
             loading = false
         }
     }
+
+    LaunchedEffect(jobs) {
+        if (jobs.isNotEmpty()) {
+            session.setLastJobsVisit(System.currentTimeMillis())
+        }
+    }
+
+
+
 
 
 
@@ -110,13 +125,19 @@ fun StudentJobsListScreen(
                         )
                     } else {
                         jobs.forEach { job ->
+
+                            val isNew = job.createdAt > lastVisit
+
+
                             JobTile(
                                 job = job,
+                                isNew = isNew,
                                 onClick = {
                                     navController.navigate("job_details/${job.jobId}")
                                 }
                             )
                         }
+
                     }
                 }
             }
@@ -127,16 +148,23 @@ fun StudentJobsListScreen(
 @Composable
 fun JobTile(
     job: JobModel,
+    isNew: Boolean,
     onClick: () -> Unit
-) {
+)
+ {
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(8.dp),
-        shape = RoundedCornerShape(20.dp)
-    ) {
+     Card(
+         modifier = Modifier
+             .fillMaxWidth()
+             .clickable { onClick() },
+         border = if (isNew)
+             BorderStroke(2.dp, Color(0xFF4CAF50))
+         else null,
+         elevation = CardDefaults.cardElevation(8.dp),
+         shape = RoundedCornerShape(20.dp)
+     )
+
+     {
         Column(modifier = Modifier.padding(18.dp)) {
 
             // ---------- Top ----------
@@ -146,9 +174,24 @@ fun JobTile(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(job.company, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+
+                        Text(job.company, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+
+                        if (isNew) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "NEW",
+                                color = Color(0xFF4CAF50),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
                     Text(job.role, fontSize = 15.sp, color = Color.Gray)
                 }
+
 
                 // Batch Badge (keep highlight)
                 Surface(

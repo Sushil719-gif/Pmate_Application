@@ -2,11 +2,11 @@ package com.example.pmate.ui.Admin.jobs
 
 
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.font.FontWeight
 import com.example.pmate.ui.Student.studentjobs.FileItemCard
+import com.example.pmate.Firestore.FirestoreRepository.FormRepository
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.CommonReusableUIComponents.JobHeader
 import com.example.pmate.Firestore.DataModels.JobModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
@@ -48,20 +50,37 @@ fun AdminJobDetailsScreen(
     jobId: String
 ) {
 
-    val repo = remember { FirestoreRepository() }
+    val context = LocalContext.current
+    val session = LocalSessionManager.current
+    val repo = remember { FirestoreRepository(session) }
+
+    val formRepo = remember {
+        FormRepository(session.currentCollegeId)
+    }
+    var formTitle by remember { mutableStateOf("") }
+
     var job by remember { mutableStateOf<JobModel?>(null) }
     var loading by remember { mutableStateOf(true) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+
 
     LaunchedEffect(Unit) {
         scope.launch {
             job = repo.getJobById(jobId)
+
+            job?.jobFormId?.let { jfId ->
+                formRepo.getJobFormTitle(jfId) { title ->
+                    formTitle = title
+                }
+            }
+
             loading = false
         }
     }
+
+
 
     Scaffold(
         topBar = {
@@ -105,25 +124,45 @@ fun AdminJobDetailsScreen(
                 batch = j.batchYear,
                 j.deadline
             )
+            if (formTitle.isNotBlank()) {
+                Text(
+                    "Application Form Used",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(8.dp))
+                DetailChip(Icons.Default.List, formTitle)
+                Divider()
+            }
+
+
+
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(Modifier.weight(1f)) {
-                    DetailChip(Icons.Default.Money, j.stipend)
+                    DetailChip(
+                        Icons.Default.Money,
+                        "${j.stipend}\nCTC: ${j.ctcLpa} LPA"
+                    )
                 }
                 Box(Modifier.weight(1f)) {
                     DetailChip(Icons.Default.LocationOn, j.location)
                 }
             }
 
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(Modifier.weight(1f)) {
-                    DetailChip(Icons.Default.CalendarToday, "${j.batchYear} Batch")
+                    DetailChip(
+                        Icons.Default.Info,
+                        "Min CGPA required: ${j.minCgpa}"
+                    )
                 }
                 Box(Modifier.weight(1f)) {
                     DetailChip(
@@ -252,6 +291,36 @@ fun AdminJobDetailsScreen(
                 }
 
                 Divider()
+            }
+
+            // Google Form Section
+            if (j.googleFormTemplateLink.isNotBlank()) {
+
+                Divider()
+
+                Text(
+                    "Application Form",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        val intent = android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(j.googleFormTemplateLink)
+                        )
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Open Attached Google Form")
+                }
+
+                Spacer(Modifier.height(16.dp))
             }
 
 

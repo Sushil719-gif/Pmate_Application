@@ -16,8 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
-import com.example.pmate.Firestore.DataModels.Applicant
+import com.example.pmate.Firestore.DataModels.OADetails
 import com.example.pmate.Firestore.DataModels.StudentApplicationUI
 import kotlinx.coroutines.launch
 
@@ -28,8 +29,8 @@ fun StudentApplicationsScreen(
 ) {
 
     val scope = rememberCoroutineScope()
-
-    val repo = remember { FirestoreRepository() }
+    val session = LocalSessionManager.current
+    val repo = remember { FirestoreRepository(session) }
 
     var visible by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
@@ -42,29 +43,26 @@ fun StudentApplicationsScreen(
 
             scope.launch {
 
-                applications = applicantList.mapNotNull { applicant ->
+                applications = applicantList
+                    .sortedByDescending { it.appliedAt }
+                    .mapNotNull { applicant ->
 
-                    val job = repo.getJobById(applicant.jobId)
-                    val student = repo.getStudentById(applicant.studentId)
+                        val job = repo.getJobById(applicant.jobId)
 
-                    if (job != null && student != null) {
-                        StudentApplicationUI(
-                            companyName = job.company,
-                            role = job.role,
-                            placementStatus = applicant.status
-
-                        )
-                    } else null
-                }
+                        if (job != null) {
+                            StudentApplicationUI(
+                                companyName = job.company,
+                                role = job.role,
+                                placementStatus = applicant.status,
+                                oaDetails = applicant.oaDetails
+                            )
+                        } else null
+                    }
 
                 loading = false
             }
         }
     }
-
-
-
-
 
     Column(
         modifier = modifier
@@ -102,8 +100,9 @@ fun StudentApplicationsScreen(
                         ApplicationTile(
                             company = app.companyName,
                             role = app.role,
-                            placementStatus = app.placementStatus
-                        ) { }
+                            placementStatus = app.placementStatus,
+                            oaDetails = app.oaDetails
+                        )
                     }
 
                 }
@@ -112,13 +111,12 @@ fun StudentApplicationsScreen(
     }
 }
 
-
 @Composable
 fun ApplicationTile(
     company: String,
     role: String,
     placementStatus: String?,
-    onClick: () -> Unit
+    oaDetails: OADetails?
 ) {
 
     val (statusText, statusColor) = when (placementStatus) {
@@ -128,10 +126,10 @@ fun ApplicationTile(
         else -> "Under Review" to Color(0xFF1565C0)
     }
 
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(5.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -153,6 +151,35 @@ fun ApplicationTile(
                     color = statusColor,
                     fontWeight = FontWeight.Bold
                 )
+            }
+
+            if (oaDetails != null) {
+
+                Spacer(Modifier.height(12.dp))
+
+                Text(
+                    text = if (expanded) "Hide OA Details ▲" else "View OA Details ▼",
+                    color = Color(0xFF1565C0),
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clickable { expanded = !expanded }
+                )
+
+                AnimatedVisibility(visible = expanded) {
+
+                    Column(
+                        Modifier
+                            .padding(top = 10.dp)
+                            .background(Color(0xFFE3F2FD), RoundedCornerShape(12.dp))
+                            .padding(12.dp)
+                    ) {
+
+                        Text("OA Venue: ${oaDetails.room}", fontWeight = FontWeight.Bold)
+                        Text("Date: ${oaDetails.date}")
+                        Text("Time: ${oaDetails.time}")
+                        Text("Instructions:", fontWeight = FontWeight.Medium)
+                        Text(oaDetails.instructions)
+                    }
+                }
             }
         }
     }

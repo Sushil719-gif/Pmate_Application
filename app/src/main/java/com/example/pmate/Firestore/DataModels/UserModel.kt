@@ -8,6 +8,7 @@ data class UserModel(
     val email: String = "",
     val role: String = "",
     val branch: String = "",
-    val batchYear: String = ""
+    val batchYear: String = "",
+    val collegeId: String = "college_1"
 )
 

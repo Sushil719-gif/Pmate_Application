@@ -30,6 +30,9 @@ import com.example.pmate.ui.Admin.jobs.EditJobScreen
 import com.example.pmate.ui.Admin.settings.AboutAppScreen
 import com.example.pmate.ui.Admin.settings.ChangePasswordScreen
 import com.example.pmate.Auth.LogoutConfirmScreen
+import com.example.pmate.ui.Admin.DynamicFormEngine.FormTemplatesScreen
+import com.example.pmate.ui.Admin.DynamicFormEngine.JobFormScreen
+import com.example.pmate.ui.Admin.DynamicFormEngine.TemplateBuilderScreen
 import com.example.pmate.ui.Admin.dashboard.company.ActiveCompaniesListScreen
 import com.example.pmate.ui.Admin.dashboard.company.CompanyOnHoldListScreen
 import com.example.pmate.ui.Admin.dashboard.company.CompletedCompaniesListScreen
@@ -37,6 +40,7 @@ import com.example.pmate.ui.Admin.dashboard.company.CompletedCompaniesListScreen
 import com.example.pmate.ui.Admin.dashboard.company.PlacedStudentsScreen
 import com.example.pmate.ui.Admin.jobs.JobActionScreen
 import com.example.pmate.ui.Admin.settings.UpdateProfileScreen
+import com.example.pmate.ui.Admin.settings.UploadResultScreen
 
 
 import com.example.pmate.ui.Student.studentjobs.JobDetailsScreen
@@ -143,13 +147,24 @@ fun AppNavigation(navController: NavHostController) {
             arguments = listOf(navArgument("jobId") { type = NavType.StringType })
         ) {
             val jobId = it.arguments?.getString("jobId")!!
-            JobDetailsScreen(jobId = jobId, isAdmin = false)
+            JobDetailsScreen(
+                navController = navController,
+                jobId = jobId,
+                isAdmin = false
+            )
         }
+
+
+        // admin settings
 
         composable("update_profile") { UpdateProfileScreen(navController) }
         composable("change_password") { ChangePasswordScreen(navController) }
         composable("about_app") { AboutAppScreen(navController) }
         composable("logout_confirm") { LogoutConfirmScreen(navController) }
+        composable("upload_results") {
+            UploadResultScreen(navController)
+        }
+
 
         // ------------------ COMPANY DASHBOARD ------------------
 
@@ -206,6 +221,38 @@ fun AppNavigation(navController: NavHostController) {
         composable("StudentNotices") {
             StudentNoticeBoardScreen(navController)
         }
+
+        //Form
+
+        composable("templates") {
+            FormTemplatesScreen(navController)
+        }
+
+        composable(
+            route = "templateBuilder/{templateId}",
+            arguments = listOf(
+                navArgument("templateId") { type = NavType.StringType }
+            )
+        ) {
+            val templateId = it.arguments?.getString("templateId")!!
+            TemplateBuilderScreen(
+                templateId = templateId,
+                navController = navController
+            )
+
+        }
+
+
+        composable(
+            route = "jobForm/{jobId}",
+            arguments = listOf(navArgument("jobId") { type = NavType.StringType })
+        ) {
+            val jobId = it.arguments?.getString("jobId")!!
+            JobFormScreen(navController, jobId)
+        }
+
+
+
 
     }
 }

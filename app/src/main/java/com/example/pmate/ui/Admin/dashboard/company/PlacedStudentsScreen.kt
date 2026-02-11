@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -18,7 +19,8 @@ import com.example.pmate.Firestore.DataModels.StudentModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.input.ImeAction
-
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 
 
 @Composable
@@ -29,7 +31,11 @@ fun PlacedStudentsScreen(
 )
 {
 
-    val repo = remember { FirestoreRepository() }
+    val context = LocalContext.current
+    val session = LocalSessionManager.current
+
+    val repo = remember { FirestoreRepository(session) }
+
     val scope = rememberCoroutineScope()
 
     var data by remember {

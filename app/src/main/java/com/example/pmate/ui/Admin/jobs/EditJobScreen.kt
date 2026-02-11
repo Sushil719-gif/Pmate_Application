@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.Firestore.DataModels.JobModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import com.example.pmate.Scrolls.VerticalScrollableScreen
@@ -33,11 +35,15 @@ fun EditJobScreen(
     jobId: String
 ) {
 
-    val repo = remember { FirestoreRepository() }
+    val context = LocalContext.current
+    val session = LocalSessionManager.current
+
+    val repo = remember { FirestoreRepository(session) }
+
     var job by remember { mutableStateOf<JobModel?>(null) }
     var loading by remember { mutableStateOf(true) }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+
 
     // Fetch job first
     LaunchedEffect(Unit) {

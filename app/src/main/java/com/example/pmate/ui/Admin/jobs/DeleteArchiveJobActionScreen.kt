@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import kotlinx.coroutines.launch
 
@@ -40,9 +42,13 @@ fun JobActionScreen(
     navController: NavController,
     jobId: String
 ) {
-    val repo = remember { FirestoreRepository() }
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val session = LocalSessionManager.current
+
+    val repo = remember { FirestoreRepository(session) }
+
+    val scope = rememberCoroutineScope()
+
 
     var showArchiveDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -80,7 +86,7 @@ fun JobActionScreen(
             ) {
                 Text("Archive Job", color = Color.White)
             }
-
+            Spacer(Modifier.height(30.dp))
             // DELETE BUTTON (dangerous)
             Button(
                 onClick = { showDeleteDialog = true },

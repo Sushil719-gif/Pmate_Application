@@ -21,7 +21,8 @@ import androidx.compose.ui.platform.LocalContext
 fun LogoutConfirmScreen(navController: NavController) {
 
     val context = LocalContext.current
-    val session = SessionManager(context)
+    val session = LocalSessionManager.current
+
     val scope = rememberCoroutineScope()
 
     Scaffold(

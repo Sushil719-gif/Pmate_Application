@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import com.example.pmate.data.ThemePreferences
 
@@ -75,8 +77,10 @@ fun AdminSettingsScreen(
             onClick = { navController.navigate("change_password") }
         )
 
-        Spacer(Modifier.height(20.dp))
 
+
+
+        Spacer(Modifier.height(20.dp))
         // ------------------ Preferences ------------------
         SettingsSectionTitle("Preferences")
 
@@ -92,6 +96,32 @@ fun AdminSettingsScreen(
 
         Spacer(Modifier.height(20.dp))
 
+
+        // -----------Student Academic Data ----------------
+        SettingsSectionTitle("Student Academic Data")
+
+        SettingsOptionCard(
+            title = "Import Student Academic Data",
+            subtitle = "Upload result sheet to update CGPA and backlogs of all students",
+            icon = Icons.Default.UploadFile,
+            onClick = { navController.navigate("upload_results") }
+        )
+        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(20.dp))
+
+// ------------------ Form Configuration ------------------
+        SettingsSectionTitle("Form Configuration")
+
+        SettingsOptionCard(
+            title = "Form Templates",
+            subtitle = "Create and manage reusable form templates for jobs",
+            icon = Icons.Default.Description,
+            onClick = { navController.navigate("templates") }
+        )
+
+
+
+        Spacer(Modifier.height(20.dp))
         // ------------------ General ------------------
         SettingsSectionTitle("General")
 
@@ -116,7 +146,11 @@ fun AdminSettingsScreen(
 // ------------------ System Maintenance ------------------
         SettingsSectionTitle("System Maintenance")
 
-        val repo = remember { FirestoreRepository() }
+        val context = LocalContext.current
+        val session = LocalSessionManager.current
+
+        val repo = remember { FirestoreRepository(session) }
+
 
         var showDeleteDialog by remember { mutableStateOf(false) }
 

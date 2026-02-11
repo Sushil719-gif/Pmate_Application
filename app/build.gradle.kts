@@ -78,6 +78,10 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.0")
     implementation("androidx.datastore:datastore-core:1.1.0")
 
+    // -----------Form Fields Reorder ---------------
+    implementation ("org.burnoutcrew.composereorderable:reorderable:0.9.6")
+
+
     // ---------- TEST ----------
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

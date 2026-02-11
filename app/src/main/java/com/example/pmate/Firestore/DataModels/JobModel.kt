@@ -5,9 +5,14 @@ data class JobModel(
     val company: String = "",
     val role: String = "",
     val stipend: String = "",
+    val ctcLpa: Double = 0.0,
+
     val location: String = "",
     val jobType: String = "",
     val deadline: String = "",
+    val deadlineTimestamp: Long = 0L,
+
+
     val description: String = "",
 
     val files: List<String> = emptyList(),
@@ -21,6 +26,13 @@ data class JobModel(
     val eligibilityType: String = "UNPLACED_ONLY",
 
     val branches: List<String> = emptyList(),
+    val minCgpa: Double = 0.0,
+    val isDreamJob: Boolean = false,
+    val dreamPackageLimit: Double = 0.0,
+    val googleFormTemplateLink: String = "",
+    var jobFormId: String = "",
+
+    val createdAt: Long = System.currentTimeMillis(),
 
 
     val timestamp: Long = System.currentTimeMillis()

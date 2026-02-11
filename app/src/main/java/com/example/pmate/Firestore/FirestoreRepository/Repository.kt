@@ -1,9 +1,14 @@
 package com.example.pmate.Firestore.FirestoreRepository
 
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.example.pmate.Firestore.DataModels.Applicant
 import com.example.pmate.Firestore.DataModels.ApplicationModel
 import com.example.pmate.Firestore.DataModels.CompanyAnalytics
+import com.example.pmate.Firestore.DataModels.CsvUndoRecord
+import com.example.pmate.Firestore.DataModels.CsvUploadHistory
+import com.example.pmate.Firestore.DataModels.CsvUploadResult
 import com.example.pmate.Firestore.DataModels.JobModel
 import com.example.pmate.Firestore.DataModels.NoticeModel
 import com.example.pmate.Firestore.DataModels.StudentModel
@@ -11,19 +16,33 @@ import com.example.pmate.Firestore.DataModels.UserModel
 import com.example.pmate.ThreeBatchesAccess.BatchUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 
 import kotlinx.coroutines.tasks.await
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.util.Calendar
+import java.util.UUID
+import com.example.pmate.Auth.SessionManager
+import com.example.pmate.Firestore.DataModels.OADetails
+import com.example.pmate.SaasManagement.FirestorePaths
 
-class FirestoreRepository {
 
-    private val db = FirebaseFirestore.getInstance()
+class FirestoreRepository(
+    private val sessionManager: SessionManager
+) {
+
     private val auth = FirebaseAuth.getInstance()
+    private fun collegeId(): String {
+        return sessionManager.currentCollegeId
+    }
+
 
     // ADD JOB (ADMIN)
     suspend fun addJob(job: JobModel): String? {
         return try {
-            val docRef = db.collection("jobs").document()
+            val docRef = FirestorePaths.jobs(collegeId())
+                .document()
             val jobWithId = job.copy(jobId = docRef.id)
             docRef.set(jobWithId).await()
             docRef.id   //  return jobId
@@ -47,7 +66,8 @@ class FirestoreRepository {
 
     suspend fun getAllJobs(): List<JobModel> {
 
-        val snapshot = db.collection("jobs")
+        val snapshot = FirestorePaths.jobs(collegeId())
+
             .whereNotEqualTo("status", "Archived")   // only hide archived
             .get()
             .await()
@@ -63,7 +83,8 @@ class FirestoreRepository {
     // FETCH JOB BY ID
     suspend fun getJobById(jobId: String): JobModel? {
         return try {
-            db.collection("jobs")
+            FirestorePaths.jobs(collegeId())
+
                 .document(jobId)
                 .get()
                 .await()
@@ -78,7 +99,8 @@ class FirestoreRepository {
     // APPLY FOR JOB
     suspend fun applyForJob(jobId: String, studentId: String): Boolean {
         return try {
-            val alreadyApplied = db.collection("applications")
+            val alreadyApplied = FirestorePaths.applications(collegeId())
+
                 .whereEqualTo("jobId", jobId)
                 .whereEqualTo("studentId", studentId)
                 .get()
@@ -86,7 +108,8 @@ class FirestoreRepository {
 
             if (!alreadyApplied.isEmpty) return false
 
-            db.collection("applications").add(
+            FirestorePaths.applications(collegeId())
+                .add(
                 mapOf(
                     "jobId" to jobId,
                     "studentId" to studentId,
@@ -126,7 +149,8 @@ class FirestoreRepository {
     // FETCH APPLICATIONS FOR ONE STUDENT
     suspend fun getStudentApplications(studentId: String): List<ApplicationModel> {
         return try {
-            db.collection("applications")
+            FirestorePaths.applications(collegeId())
+
                 .whereEqualTo("studentId", studentId)
                 .get()
                 .await()
@@ -140,8 +164,8 @@ class FirestoreRepository {
     // FETCH STUDENT DETAILS
     suspend fun getStudentById(studentId: String): StudentModel? {
         return try {
-            val doc = db
-                .collection("students")
+            val doc = FirestorePaths.students(collegeId())
+
                 .document(studentId)
                 .get()
                 .await()
@@ -159,7 +183,8 @@ class FirestoreRepository {
 
     suspend fun getUserById(uid: String): UserModel? {
         return try {
-            val doc = db.collection("users")
+            val doc = FirestorePaths.users(collegeId())
+
                 .document(uid)
                 .get()
                 .await()
@@ -176,8 +201,8 @@ class FirestoreRepository {
         jobId: String,
         studentId: String
     ): Boolean {
-        val snapshot = db
-            .collection("applications")
+        val snapshot = FirestorePaths.applications(collegeId())
+
             .whereEqualTo("jobId", jobId)
             .whereEqualTo("studentId", studentId)
             .get()
@@ -191,7 +216,8 @@ class FirestoreRepository {
     // UPDATE JOB
     suspend fun updateJob(job: JobModel): Boolean {
         return try {
-            db.collection("jobs").document(job.jobId).set(job).await()
+            FirestorePaths.jobs(collegeId())
+                .document(job.jobId).set(job).await()
             true
         } catch (e: Exception) {
             false
@@ -202,7 +228,8 @@ class FirestoreRepository {
  //To Update Job Status
 
     suspend fun updateJobStatus(jobId: String, newStatus: String) {
-        db.collection("jobs")
+        FirestorePaths.jobs(collegeId())
+
             .document(jobId)
             .update("status", newStatus)
             .await()
@@ -211,7 +238,8 @@ class FirestoreRepository {
     //to get particular company important details
 
     suspend fun getJobByCompany(company: String): JobModel? {
-        val snapshot = db.collection("jobs")
+        val snapshot = FirestorePaths.jobs(collegeId())
+
             .whereEqualTo("company", company)
             .get()
             .await()
@@ -242,7 +270,8 @@ class FirestoreRepository {
             validTill = now + (validDays * 24 * 60 * 60 * 1000L)
         )
 
-        db.collection("notices")
+        FirestorePaths.notices(collegeId())
+
             .add(notice)
             .await()
     }
@@ -254,7 +283,8 @@ class FirestoreRepository {
 
         val now = System.currentTimeMillis()
 
-        return db.collection("notices")
+        return FirestorePaths.notices(collegeId())
+
             .get()
             .await()
             .toObjects(NoticeModel::class.java)
@@ -266,7 +296,8 @@ class FirestoreRepository {
 
     suspend fun getUserByEmailAndPassword(email: String, password: String): UserModel? {
         return try {
-            val snapshot = db.collection("users")
+            val snapshot = FirestorePaths.users(collegeId())
+
                 .whereEqualTo("email", email)
                 .whereEqualTo("password", password)
                 .get()
@@ -283,7 +314,8 @@ class FirestoreRepository {
 
     suspend fun loginUser(email: String, password: String): UserModel? {
         return try {
-            val snapshot = db.collection("users")
+            val snapshot = FirestorePaths.users(collegeId())
+
                 .whereEqualTo("email", email)
                 .whereEqualTo("password", password)
                 .get()
@@ -302,7 +334,8 @@ class FirestoreRepository {
         jobId: String
     ): List<Pair<String, Pair<Applicant, StudentModel>>> {
 
-        val apps = db.collection("applications")
+        val apps = FirestorePaths.applications(collegeId())
+
             .whereEqualTo("jobId", jobId)
             .get()
             .await()
@@ -312,7 +345,8 @@ class FirestoreRepository {
         for (doc in apps.documents) {
 
             val applicant = doc.toObject(Applicant::class.java) ?: continue
-            val studentDoc = db.collection("students")
+            val studentDoc = FirestorePaths.students(collegeId())
+
                 .document(applicant.studentId)
                 .get()
                 .await()
@@ -336,14 +370,21 @@ class FirestoreRepository {
         studentId: String,
         status: String
     ) {
-        // Update application status
-        db.collection("applications")
+        val updates = mutableMapOf<String, Any>(
+            "status" to status
+        )
+
+        if (status != "SHORTLISTED") {
+            updates["oaDetails"] =
+                com.google.firebase.firestore.FieldValue.delete()
+        }
+
+        FirestorePaths.applications(collegeId())
             .document(applicationId)
-            .update("status", status)
+            .update(updates)
             .await()
 
-        // 🔥 Recalculate student's placement status properly
-        val apps = db.collection("applications")
+        val apps = FirestorePaths.applications(collegeId())
             .whereEqualTo("studentId", studentId)
             .get()
             .await()
@@ -352,7 +393,7 @@ class FirestoreRepository {
             it.getString("status") == "PLACED"
         }
 
-        db.collection("students")
+        FirestorePaths.students(collegeId())
             .document(studentId)
             .update(
                 "placementStatus",
@@ -360,6 +401,7 @@ class FirestoreRepository {
             )
             .await()
     }
+
 
 
 
@@ -372,7 +414,8 @@ class FirestoreRepository {
         uid: String,
         email: String
     ) {
-        val docRef = db.collection("students").document(uid)
+        val docRef = FirestorePaths.students(collegeId())
+            .document(uid)
         val snapshot = docRef.get().await()
 
         if (!snapshot.exists()) {
@@ -393,7 +436,8 @@ class FirestoreRepository {
         uid: String,
         user: UserModel
     ) {
-        val docRef = db.collection("students").document(uid)
+        val docRef = FirestorePaths.students(collegeId())
+            .document(uid)
         val snapshot = docRef.get().await()
 
         if (!snapshot.exists()) {
@@ -440,8 +484,8 @@ class FirestoreRepository {
 
         val currentUserId = auth.currentUser?.uid ?: return emptyList()
 
-        val snapshot = db
-            .collection("applications")
+        val snapshot = FirestorePaths.applications(collegeId())
+
             .whereEqualTo("studentId", currentUserId) // ✅ CORRECT
             .get()
             .await()
@@ -459,7 +503,8 @@ fun listenStudentApplications(
 ) {
     val currentUserId = auth.currentUser?.uid ?: return
 
-    db.collection("applications")
+    FirestorePaths.applications(collegeId())
+
         .whereEqualTo("studentId", currentUserId)
         .addSnapshotListener { snapshot, _ ->
 
@@ -478,7 +523,8 @@ fun listenStudentApplications(
         jobId: String,
         onResult: (List<Pair<String, Pair<Applicant, StudentModel>>>) -> Unit
     ) {
-        db.collection("applications")
+        FirestorePaths.applications(collegeId())
+
             .whereEqualTo("jobId", jobId)
             .addSnapshotListener { snapshot, error ->
 
@@ -496,7 +542,8 @@ fun listenStudentApplications(
                     val applicant = doc.toObject(Applicant::class.java) ?: return@forEach
                     val applicationId = doc.id
 
-                    db.collection("students")
+                    FirestorePaths.students(collegeId())
+
                         .document(applicant.studentId)
                         .get()
                         .addOnSuccessListener { studentDoc ->
@@ -520,7 +567,8 @@ fun listenStudentApplications(
     // permanent delete
 
     suspend fun deleteJobPermanently(jobId: String) {
-        db.collection("jobs")
+        FirestorePaths.jobs(collegeId())
+
             .document(jobId)
             .delete()
             .await()
@@ -530,7 +578,8 @@ fun listenStudentApplications(
     //Archive jobs(soft delete)
 
     suspend fun archiveJob(jobId: String) {
-        db.collection("jobs")
+        FirestorePaths.jobs(collegeId())
+
             .document(jobId)
             .update("active", false)
             .await()
@@ -538,7 +587,8 @@ fun listenStudentApplications(
 
 
     suspend fun getStudentsByBatch(batch: String): List<StudentModel> {
-        val snapshot = db.collection("students")
+        val snapshot = FirestorePaths.students(collegeId())
+
             .whereEqualTo("batchYear", batch)
             .get()
             .await()
@@ -552,7 +602,8 @@ fun listenStudentApplications(
         val allowed = BatchUtils.getAllowedBatches()
 
         // Delete old students
-        val students = db.collection("students").get().await()
+        val students = FirestorePaths.students(collegeId())
+            .get().await()
         for (doc in students.documents) {
             val batch = doc.getString("batchYear") ?: continue
             if (!allowed.contains(batch)) {
@@ -561,7 +612,8 @@ fun listenStudentApplications(
         }
 
         // Delete old jobs
-        val jobs = db.collection("jobs").get().await()
+        val jobs =FirestorePaths.jobs(collegeId())
+            .get().await()
         for (doc in jobs.documents) {
             val batch = doc.getString("batchYear") ?: continue
             if (!allowed.contains(batch)) {
@@ -578,7 +630,8 @@ fun listenStudentApplications(
         val result = mutableListOf<Pair<StudentModel, List<String>>>()
 
         //  get students of batch
-        val studentsSnapshot = db.collection("students")
+        val studentsSnapshot = FirestorePaths.students(collegeId())
+
             .whereEqualTo("batchYear", batch)
             .get()
             .await()
@@ -594,7 +647,8 @@ fun listenStudentApplications(
 
 
             //  get placed applications of that student
-            val apps = db.collection("applications")
+            val apps =FirestorePaths.applications(collegeId())
+
                 .whereEqualTo("studentId", studentId)
                 .whereEqualTo("status", "PLACED")
                 .get()
@@ -609,7 +663,8 @@ fun listenStudentApplications(
 
                 val jobId = app.getString("jobId") ?: continue
 
-                val jobDoc = db.collection("jobs")
+                val jobDoc = FirestorePaths.jobs(collegeId())
+
                     .document(jobId)
                     .get()
                     .await()
@@ -632,7 +687,8 @@ fun listenStudentApplications(
         batch: String
     ): CompanyAnalytics {
 
-        val jobs = db.collection("jobs")
+        val jobs = FirestorePaths.jobs(collegeId())
+
             .whereEqualTo("company", company)
             .whereEqualTo("batchYear", batch)
             .get()
@@ -653,7 +709,8 @@ fun listenStudentApplications(
 
             val jobId = job.id
 
-            val applications = db.collection("applications")
+            val applications = FirestorePaths.applications(collegeId())
+
                 .whereEqualTo("jobId", jobId)
                 .get()
                 .await()
@@ -686,7 +743,8 @@ fun listenStudentApplications(
 
     fun listenAllJobs(onUpdate: (List<JobModel>) -> Unit) {
 
-        db.collection("jobs")
+        FirestorePaths.jobs(collegeId())
+
             .addSnapshotListener { snapshot, _ ->
 
                 if (snapshot != null) {
@@ -703,12 +761,14 @@ fun listenStudentApplications(
 
     suspend fun getCurrentStudentBatch(): String {
         val uid = auth.currentUser?.uid ?: return ""
-        val doc = db.collection("students").document(uid).get().await()
+        val doc = FirestorePaths.students(collegeId())
+            .document(uid).get().await()
         return doc.getString("batchYear") ?: ""
     }
 
     suspend fun getNoticesForBatch(batch: String): List<NoticeModel> {
-        val snap = db.collection("notices")
+        val snap = FirestorePaths.notices(collegeId())
+
             .whereEqualTo("batchYear", batch)
             .get()
             .await()
@@ -720,7 +780,8 @@ fun listenStudentApplications(
 
         val uid = auth.currentUser?.uid ?: return StudentModel()
 
-        val doc = db.collection("students")
+        val doc = FirestorePaths.students(collegeId())
+
             .document(uid)
             .get()
             .await()
@@ -731,7 +792,8 @@ fun listenStudentApplications(
 
     suspend fun getNoticesByBatch(batch: String): List<NoticeModel> {
 
-        val snapshot = db.collection("notices")
+        val snapshot = FirestorePaths.notices(collegeId())
+
             .whereEqualTo("batchYear", batch)
             .get()
             .await()
@@ -741,7 +803,8 @@ fun listenStudentApplications(
 
     suspend fun getJobsByBatch(batch: String): List<JobModel> {
 
-        val snapshot = db.collection("jobs")
+        val snapshot = FirestorePaths.jobs(collegeId())
+
             .whereEqualTo("isActive", true)
             .whereEqualTo("batchYear", batch)
             .get()
@@ -750,6 +813,264 @@ fun listenStudentApplications(
         return snapshot.toObjects(JobModel::class.java)
             .sortedByDescending { it.timestamp }
     }
+
+
+    // Importing student data
+
+    suspend fun processResultCsv(
+        context: Context,
+        uri: Uri,
+        selectedBatch: String
+    ): CsvUploadResult {
+
+        val undoRecords = mutableListOf<CsvUndoRecord>()
+
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val reader = BufferedReader(InputStreamReader(inputStream))
+
+        val lines = reader.readLines()
+        reader.close()
+
+        var updated = 0
+        var skipped = 0
+        var notFound = 0
+
+        for (i in 1 until lines.size) {
+
+            val parts = lines[i].split(",")
+
+            if (parts.size < 4) continue
+
+            val name = parts[0].trim()
+            val usn = parts[1].trim()
+            val cgpa = parts[2].trim().toDoubleOrNull() ?: continue
+            val backlogs = parts[3].trim().toIntOrNull() ?: continue
+
+            val (result, oldRecord) =
+                updateStudentResult(usn, name, cgpa, backlogs, selectedBatch)
+
+            when (result) {
+                "UPDATED" -> {
+                    updated++
+                    oldRecord?.let { undoRecords.add(it) }
+                }
+                "SKIPPED" -> skipped++
+                "NOT_FOUND" -> notFound++
+            }
+        }
+
+        // ✅ Save undo history only once
+        val uploadId = saveUndoHistory(selectedBatch, undoRecords)
+
+        val expiresAt = System.currentTimeMillis() + (24 * 60 * 60 * 1000)
+
+        return CsvUploadResult(
+            uploadId = uploadId,
+            updated = updated,
+            skipped = skipped,
+            notFound = notFound,
+            expiresAt = expiresAt
+        )
+    }
+
+
+
+
+    private suspend fun updateStudentResult(
+        usn: String,
+        name: String,
+        cgpa: Double,
+        backlogs: Int,
+        selectedBatch: String
+    ): Pair<String, CsvUndoRecord?> {
+
+        val query = FirestorePaths.students(collegeId())
+
+            .whereEqualTo("usn", usn)
+            .whereEqualTo("batchYear", selectedBatch)
+            .get()
+            .await()
+
+        if (query.isEmpty) return "NOT_FOUND" to null
+
+        val doc = query.documents.first()
+
+        val oldRecord = CsvUndoRecord(
+            usn = usn,
+            oldName = doc.getString("name") ?: "",
+            oldCgpa = doc.getDouble("cgpa") ?: 0.0,
+            oldBacklogs = (doc.getLong("backlogs") ?: 0L).toInt()
+        )
+
+        doc.reference.update(
+            mapOf(
+                "name" to name,
+                "cgpa" to cgpa,
+                "backlogs" to backlogs
+            )
+        )
+
+        return "UPDATED" to oldRecord
+    }
+
+//save history of student details.......
+private suspend fun saveUndoHistory(
+    batch: String,
+    records: List<CsvUndoRecord>
+): String {
+
+    val uploadId = UUID.randomUUID().toString()
+    val now = System.currentTimeMillis()
+
+    val history = CsvUploadHistory(
+        uploadId = uploadId,
+        batch = batch,
+        timestamp = now,
+        expiresAt = now + (24 * 60 * 60 * 1000),
+        records = records
+    )
+
+    FirestorePaths.csvHistory(collegeId())
+
+        .document(uploadId)
+        .set(history)
+        .await()
+
+    return uploadId
+}
+
+
+
+    // undo function...........
+
+    suspend fun undoCsvUpload(uploadId: String) {
+
+        val historyDoc = FirestorePaths.csvHistory(collegeId())
+
+            .document(uploadId)
+            .get()
+            .await()
+
+        val history = historyDoc.toObject(CsvUploadHistory::class.java)
+            ?: return
+
+        for (record in history.records) {
+            val query = FirestorePaths.students(collegeId())
+
+                .whereEqualTo("usn", record.usn)
+                .get()
+                .await()
+
+            for (doc in query.documents) {
+                doc.reference.update(
+                    mapOf(
+                        "name" to record.oldName,
+                        "cgpa" to record.oldCgpa,
+                        "backlogs" to record.oldBacklogs
+                    )
+                )
+            }
+        }
+
+        historyDoc.reference.delete()
+    }
+
+    suspend fun getLastCsvUploadForBatch(batch: String): CsvUploadResult? {
+        val query = FirestorePaths.csvHistory(collegeId())
+
+            .whereEqualTo("batch", batch)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .await()
+
+        val doc = query.documents.firstOrNull() ?: return null
+        return doc.toObject(CsvUploadResult::class.java)
+    }
+
+
+//Student's data collected once
+
+    suspend fun updateStudentProfile(
+        studentId: String,
+        name: String,
+        usn: String,
+        branch: String,
+        batch: String,
+        gender: String,
+        phone: String
+    ) {
+        FirestorePaths.students(collegeId())
+            .document(studentId)
+            .update(
+                mapOf(
+                    "name" to name,
+                    "usn" to usn,
+                    "branch" to branch,
+                    "batchYear" to batch,
+                    "gender" to gender,
+                    "phone" to phone
+                )
+            ).await()
+    }
+
+//Add offers to students model
+
+    suspend fun addOfferToStudent(studentId: String, lpa: Double) {
+
+        val docRef = FirestorePaths.students(collegeId())
+            .document(studentId)
+
+        val snap = docRef.get().await()
+        val student = snap.toObject(StudentModel::class.java) ?: return
+
+        val updatedOffers = student.offers + lpa
+
+        docRef.update(
+            mapOf(
+                "offers" to updatedOffers,
+                "placementStatus" to "PLACED"
+            )
+        ).await()
+    }
+
+
+
+    suspend fun updatePlacementStatus(studentId: String, status: String) {
+
+        FirestorePaths.students(collegeId())
+            .document(studentId)
+            .update("placementStatus", status)
+            .await()
+    }
+
+    suspend fun updateJobFormId(jobId: String, jobFormId: String) {
+        FirestorePaths.jobs(collegeId())
+            .document(jobId)
+            .update("jobFormId", jobFormId)
+            .await()
+    }
+
+    suspend fun assignOAToApplicants(
+        roomMap: Map<String, String>,
+        oa: OADetails
+    ) {
+        roomMap.forEach { (applicationId, room) ->
+
+            FirestorePaths.applications(collegeId())
+                .document(applicationId)
+                .update(
+                    "oaDetails",
+                    oa.copy(room = room)
+                )
+                .await()
+        }
+    }
+
+
+
+
+
 
 
 }

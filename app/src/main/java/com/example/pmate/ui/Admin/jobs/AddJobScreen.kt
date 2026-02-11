@@ -23,19 +23,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.Firestore.DataModels.JobModel
 import com.example.pmate.Firestore.FirestoreRepository.FirestoreRepository
 import com.example.pmate.Scrolls.VerticalScrollableScreen
 import kotlinx.coroutines.launch
 import java.util.*
+import com.example.pmate.Firestore.DataModels.FormTemplate
+import com.example.pmate.Firestore.FirestoreRepository.FormRepository
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+
 fun AddJobScreen(
     navController: NavController,
-    batch: String,
-    repository: FirestoreRepository = FirestoreRepository()
-) {
+    batch: String
+)
+{
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val session = LocalSessionManager.current
+
+    // -------- Form Template --------
+
+    val formRepo = remember {
+        FormRepository(session.currentCollegeId)
+    }
 
     // STATES
     var company by remember { mutableStateOf("") }
@@ -45,8 +61,12 @@ fun AddJobScreen(
 
     var role by remember { mutableStateOf("") }
     var stipend by remember { mutableStateOf("") }
+    var ctcLpa by remember { mutableStateOf("") }
+
     var location by remember { mutableStateOf("") }
     var deadline by remember { mutableStateOf("") }
+    var deadlineTs by remember { mutableStateOf(0L) }
+
     var description by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
@@ -56,22 +76,47 @@ fun AddJobScreen(
 
     var instructions by remember { mutableStateOf("") }
 
+    //Google Form.........
+    var googleFormLink by remember { mutableStateOf("") }
+
+
+
+    var templates by remember { mutableStateOf<List<FormTemplate>>(emptyList()) }
+    var selectedTemplateId by remember { mutableStateOf("") }
+    var templateExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        formRepo.getTemplates { list ->
+            templates = list
+        }
+    }
+
+
+
     // Branch selection
     val branchOptions = listOf("CSE", "IT", "ECE", "EEE", "MECH", "CIVIL")
     var selectedBranches by remember { mutableStateOf(setOf<String>()) }
     var branchExpanded by remember { mutableStateOf(false) }
 
+//elgigbility rules.....
+    var minCgpa by remember { mutableStateOf("") }
+    var isDreamJob by remember { mutableStateOf(false) }
+    var dreamLimit by remember { mutableStateOf("6.5") }
 
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+
+
+    val repository = remember { FirestoreRepository(session) }
 
     //Eligibility
-
     val eligibilityOptions = listOf(
+        "All Students",
         "Unplaced Students Only",
-        "All Students"
+        "Female Students Only",
+        "Unplaced Female Students Only"
     )
+
+
 
     var selectedEligibility by remember {
         mutableStateOf(eligibilityOptions.first())
@@ -111,6 +156,13 @@ fun AddJobScreen(
             InputField("Company Name", company) { company = it }
             InputField("Job Role", role) { role = it }
             InputField("Stipend / Package", stipend) { stipend = it }
+            OutlinedTextField(
+                value = ctcLpa,
+                onValueChange = { ctcLpa = it },
+                label = { Text("CTC (LPA) - numbers only") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             InputField("Location", location) { location = it }
 
             // to select bactch..............
@@ -254,6 +306,99 @@ fun AddJobScreen(
                 }
             }
 
+            // Minimum CGPA......
+            OutlinedTextField(
+                value = minCgpa,
+                onValueChange = { minCgpa = it },
+                label = { Text("Minimum CGPA Required") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = isDreamJob,
+                    onCheckedChange = { isDreamJob = it }
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Dream fee applies?")
+            }
+
+            if (isDreamJob) {
+
+                val limits = listOf("5", "6", "6.5", "7")
+                var dreamExpanded by remember { mutableStateOf(false) }
+
+                ExposedDropdownMenuBox(
+                    expanded = dreamExpanded,
+                    onExpandedChange = { dreamExpanded = !dreamExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = "$dreamLimit LPA",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Dream Package Limit?") },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(dreamExpanded)
+                        }
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = dreamExpanded,
+                        onDismissRequest = { dreamExpanded = false }
+                    ) {
+                        limits.forEach { limit ->
+                            DropdownMenuItem(
+                                text = { Text("$limit LPA") },
+                                onClick = {
+                                    dreamLimit = limit
+                                    dreamExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            //Form Template selector...
+
+            ExposedDropdownMenuBox(
+                expanded = templateExpanded,
+                onExpandedChange = { templateExpanded = !templateExpanded }
+            ) {
+                OutlinedTextField(
+                    value = templates
+                        .firstOrNull { it.templateId == selectedTemplateId }
+                        ?.title ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Form Template") },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = templateExpanded)
+                    }
+                )
+
+                ExposedDropdownMenu(
+                    expanded = templateExpanded,
+                    onDismissRequest = { templateExpanded = false }
+                ) {
+                    templates.forEach { template ->
+                        DropdownMenuItem(
+                            text = { Text(template.title) },
+                            onClick = {
+                                selectedTemplateId = template.templateId
+                                templateExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+
 
 
             // Deadline Picker
@@ -267,9 +412,11 @@ fun AddJobScreen(
                         Icons.Default.CalendarMonth,
                         contentDescription = null,
                         modifier = Modifier.clickable {
-                            pickDateTime(context) { dateTime ->
+                            pickDateTime(context) { dateTime, ts ->
                                 deadline = dateTime
+                                deadlineTs = ts
                             }
+
 
                         }
                     )
@@ -319,9 +466,12 @@ fun AddJobScreen(
             Button(
                 onClick = {
 
-                    if (company.isBlank() || role.isBlank() || stipend.isBlank() ||
-                        location.isBlank() || deadline.isBlank() || description.isBlank()
-                        || batchYear.isBlank() || selectedBranches.isEmpty()
+                    if (company.isBlank() || role.isBlank() || stipend.isBlank() || ctcLpa.isBlank()
+                        ||location.isBlank() || deadline.isBlank() || description.isBlank()
+                        || batchYear.isBlank() || selectedBranches.isEmpty() || deadlineTs == 0L || selectedTemplateId.isBlank()
+
+
+
 
 
                     ) return@Button
@@ -341,26 +491,62 @@ fun AddJobScreen(
 
                         // Create job object
                         val job = JobModel(
+                            createdAt = System.currentTimeMillis(),
                             company = company,
                             role = role,
                             stipend = stipend,
+                            ctcLpa = ctcLpa.toDoubleOrNull() ?: 0.0,
+
                             location = location,
                             jobType = selectedJobType,
                             deadline = deadline,
+                            deadlineTimestamp = deadlineTs,
+
+
                             description = description,
                             instructions = instructions,
                             batchYear = batchYear,
                             branches = selectedBranches.toList(),
-                            eligibilityType = if (selectedEligibility == "All Students")
-                                "ALL"
-                            else
-                                "UNPLACED_ONLY",
-                            files = uploadedUrls
+                            eligibilityType = when (selectedEligibility) {
+                                "All Students" -> "ALL"
+                                "Unplaced Students Only" -> "UNPLACED_ONLY"
+                                "Female Students Only" -> "FEMALE_ONLY"
+                                "Unplaced Female Students Only" -> "UNPLACED_FEMALE_ONLY"
+                                else -> "ALL"
+                            },
+
+                            minCgpa = minCgpa.toDoubleOrNull() ?: 0.0,
+                            isDreamJob = isDreamJob,
+                            dreamPackageLimit = dreamLimit.toDoubleOrNull() ?: 0.0,
+
+
+                            files = uploadedUrls,
+//                            googleFormTemplateLink = googleFormLink
                         )
+
 
 
                         // Save Job to Firestore
                         val jobId = repository.addJob(job)
+
+                        if (jobId != null) {
+
+                            val safeJobId = jobId   //  now non-null String
+
+                            formRepo.copyTemplateToJobForm(
+                                templateId = selectedTemplateId,
+                                jobId = safeJobId
+                            ) { jobFormId ->
+
+                                scope.launch {
+                                    repository.updateJobFormId(safeJobId, jobFormId)
+                                }
+                            }
+                        }
+
+
+
+
 
                         loading = false
 
@@ -406,7 +592,7 @@ fun BatchYearDropdown(
     onYearSelected: (String) -> Unit
 ) {
     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-    val years = ((currentYear - 1)..(currentYear + 6)).map { it.toString() }
+    val years = ((currentYear - 1)..(currentYear + 1)).map { it.toString() }
 
 
     var expanded by remember { mutableStateOf(false) }
@@ -459,8 +645,9 @@ fun InputField(label: String, value: String, onChange: (String) -> Unit) {
 
 fun pickDateTime(
     context: Context,
-    onDateTimeSelected: (String) -> Unit
-) {
+    onDateTimeSelected: (String, Long) -> Unit
+)
+ {
     val calendar = Calendar.getInstance()
 
     DatePickerDialog(
@@ -485,7 +672,8 @@ fun pickDateTime(
                         Locale.getDefault()
                     )
 
-                    onDateTimeSelected(format.format(selectedCal.time))
+                    onDateTimeSelected(format.format(selectedCal.time), selectedCal.timeInMillis)
+
 
                 },
                 calendar.get(Calendar.HOUR_OF_DAY),

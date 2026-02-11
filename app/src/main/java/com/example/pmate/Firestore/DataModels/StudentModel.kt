@@ -7,6 +7,13 @@ data class StudentModel(
     val branch: String = "",
     val batchYear: String = "",
     val status: String = "ACTIVE",
-    val placementStatus: String = "IN_PROCESS"
+    val placementStatus: String = "IN_PROCESS",
+    val cgpa: Double = 0.0,
+    val backlogs: Int = 0,
+    val offers: List<Double> = emptyList(),
+    val gender: String = "",
+    val phone: String = ""
+
+
 )
 

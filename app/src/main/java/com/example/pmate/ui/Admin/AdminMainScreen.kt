@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.pmate.Auth.LocalSessionManager
 import com.example.pmate.Auth.SessionManager
 import com.example.pmate.ui.Admin.dashboard.AdminDashboardScreen
 import com.example.pmate.ui.Admin.jobs.AdminJobs
@@ -23,7 +24,8 @@ fun AdminMainScreen(navController: NavController) {
 
     // ▬▬▬ SESSION PROTECTION ▬▬▬
     val context = LocalContext.current
-    val session = SessionManager(context)
+    val session = LocalSessionManager.current
+
     val currentYear = Calendar.getInstance().get(Calendar.YEAR).toString()
     var selectedBatch by rememberSaveable { mutableStateOf(currentYear) }
 

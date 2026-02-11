@@ -20,6 +20,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 
 
 @Composable
@@ -127,13 +130,19 @@ fun StudentSection(
 
  {
 
-    val repo = remember { FirestoreRepository() }
-    var total by remember { mutableStateOf(0) }
+     val context = LocalContext.current
+     val session = LocalSessionManager.current
+
+     val repo = remember { FirestoreRepository(session) }
+
+     var total by remember { mutableStateOf(0) }
     var placed by remember { mutableStateOf(0) }
     var notPlaced by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
      LaunchedEffect(batch) {
+
+
          scope.launch {
              val students = repo.getStudentsByBatch(batch)
 
@@ -187,8 +196,12 @@ fun CompanySection(
 )
  {
 
-    val repo = remember { FirestoreRepository() }
-    var totalCompanies by remember { mutableStateOf(0) }
+     val context = LocalContext.current
+     val session = LocalSessionManager.current
+
+     val repo = remember { FirestoreRepository(session) }
+
+     var totalCompanies by remember { mutableStateOf(0) }
     var activeCount by remember { mutableStateOf(0) }
     var holdCount by remember { mutableStateOf(0) }
     var completedCount by remember { mutableStateOf(0) }

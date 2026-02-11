@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class StudentViewModel(
-    private val repo: FirestoreRepository = FirestoreRepository()
+    private val repo: FirestoreRepository
 ) : ViewModel() {
 
     private val _student = MutableStateFlow<StudentModel?>(null)
@@ -23,3 +23,4 @@ class StudentViewModel(
         }
     }
 }
+

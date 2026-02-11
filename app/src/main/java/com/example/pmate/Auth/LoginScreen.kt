@@ -1,5 +1,6 @@
 package com.example.pmate.Auth
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,11 +34,10 @@ fun LoginScreen(
     var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val session = SessionManager(context)
+    val session = LocalSessionManager.current
 
-    val repo = remember { FirestoreRepository() }
+    val repo = remember { FirestoreRepository(session) }
     val scope = rememberCoroutineScope()
-
     val auth = FirebaseAuth.getInstance()
 
     Column(
@@ -125,26 +125,26 @@ fun LoginScreen(
                             return@launch
                         }
 
-                        //  AUTO-CREATE STUDENT PROFILE
+                        // Auto-create student profile
                         if (actualRole == "student") {
-                             repo.createStudentFromUserIfNotExists(
-                            uid = uid,
-                            user = user
-                        )
+                            repo.createStudentFromUserIfNotExists(
+                                uid = uid,
+                                user = user
+                            )
                         }
 
-
-
-
-
-                        // SAVE SESSION
+                        // ✅ Save session → Load collegeId → Navigate (same coroutine)
                         session.saveUserSession(
                             userId = uid,
                             email = email,
-                            role = user.role
+                            role = user.role,
+                            collegeId = user.collegeId
                         )
 
-                        // NAVIGATION
+                        session.loadCollegeId()
+
+                        Log.d("SAAS_TEST", "CollegeId = ${session.currentCollegeId}")
+
                         if (actualRole == "admin") {
                             navController.navigate("admin_main") {
                                 popUpTo("login/$expectedRole") { inclusive = true }

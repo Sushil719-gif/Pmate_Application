@@ -26,24 +26,47 @@ import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.example.pmate.Auth.LocalSessionManager
+import com.example.pmate.Auth.SessionManager
 import com.example.pmate.CommonReusableUIComponents.JobHeader
+import com.example.pmate.ui.Student.studentjobs.ApplyLogicFiles.ApplyLogic
+import com.example.pmate.ui.Student.studentjobs.ApplyLogicFiles.ApplyState
+import com.example.pmate.ui.Student.studentjobs.ApplyLogicFiles.GoogleFormPrefillBuilder
 import com.example.pmate.viewmodel.StudentViewModel
+import com.example.pmate.viewmodel.StudentViewModelFactory
 import com.google.firebase.auth.FirebaseAuth
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JobDetailsScreen(
+    navController: NavController,
     jobId: String,
     isAdmin: Boolean = false
-) {
+)
+ {
 
-    val studentViewModel: StudentViewModel = viewModel()
+
+    val session = LocalSessionManager.current
+
+    val repo = remember { FirestoreRepository(session) }
+
+    val studentViewModel: StudentViewModel = viewModel(
+        factory = StudentViewModelFactory(repo)
+    )
+    LaunchedEffect(Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
+        studentViewModel.loadStudent(uid)
+    }
+
+
     val student by studentViewModel.student.collectAsState()
     var studentChecked by remember { mutableStateOf(false) }
 
 
-    val repo = remember { FirestoreRepository() }
+    val context = LocalContext.current
+
     var job by remember { mutableStateOf<JobModel?>(null) }
     var loading by remember { mutableStateOf(true) }
     var alreadyApplied by remember { mutableStateOf(false) }
@@ -62,8 +85,7 @@ fun JobDetailsScreen(
 
     // Apply states (MOVED UP)
     var applyLoading by remember { mutableStateOf(false) }
-    var applied by remember { mutableStateOf(false) }
-    var feedbackMessage by remember { mutableStateOf("") }
+
 
     // Fetch job
 
@@ -72,7 +94,7 @@ fun JobDetailsScreen(
         loading = false
     }
 
-    LaunchedEffect(jobId, student) {
+    LaunchedEffect(jobId, student, job) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@LaunchedEffect
 
         if (student != null && job != null) {
@@ -80,34 +102,26 @@ fun JobDetailsScreen(
                 jobId = jobId,
                 studentId = uid
             )
-            applied = alreadyApplied
         }
     }
 
 
 
+    val currentJob = job
+    val currentStudent = student
 
-    if (loading) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    if (loading || currentJob == null || currentStudent == null) {
+        Box(
+            Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
             CircularProgressIndicator()
         }
         return
     }
 
-    if (job == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Job Not Found", color = Color.Red, fontSize = 18.sp)
-        }
-        return
-    }
-
-    val currentJob = job!!
-
-    val jobBatch = currentJob.batchYear
-    val eligibilityType = currentJob.eligibilityType
-    val isDataReady = job != null && student != null
-
-    val canApply = !alreadyApplied && currentJob.status == "Active"
+    val applyState =
+        ApplyLogic.getApplyState(currentStudent, currentJob, alreadyApplied)
 
 
 
@@ -154,12 +168,16 @@ fun JobDetailsScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Box(Modifier.weight(1f)) {
-                            DetailChip(Icons.Default.Money, currentJob.stipend)
+                            DetailChip(
+                                Icons.Default.Money,
+                                "${currentJob.stipend}\nCTC: ${currentJob.ctcLpa} LPA"
+                            )
                         }
                         Box(Modifier.weight(1f)) {
                             DetailChip(Icons.Default.LocationOn, currentJob.location)
                         }
                     }
+
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -167,15 +185,15 @@ fun JobDetailsScreen(
                     ) {
                         Box(Modifier.weight(1f)) {
                             DetailChip(
-                                Icons.Default.CalendarToday,
-                                "${currentJob.batchYear} Batch"
+                                Icons.Default.Info,
+                                "Min CGPA required: ${currentJob.minCgpa}"
                             )
                         }
                         Box(Modifier.weight(1f)) {
                             DetailChip(
                                 Icons.Default.Person,
                                 if (currentJob.eligibilityType == "ALL")
-                                    "All Students are eligible"
+                                    "All Students can apply"
                                 else
                                     "For Unplaced students only"
                             )
@@ -291,65 +309,41 @@ fun JobDetailsScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-
 // Apply section
             if (!isAdmin) {
 
-                val studentBranch = student?.branch ?: ""
-
-
-
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-
-                    if (feedbackMessage.isNotEmpty()) {
-                        Text(
-                            feedbackMessage,
-                            color = if (applied) Color(0xFF2E7D32) else Color.Red,
-                            fontSize = 16.sp
-                        )
-                    }
 
                     Button(
                         onClick = {
-                            applyLoading = true
-                            val studentId = FirebaseAuth.getInstance().currentUser!!.uid
-
-                            scope.launch {
-                                val success = repo.applyForJob(jobId, studentId)
-                                applyLoading = false
-
-                                if (success) {
-                                    applied = true
-                                    feedbackMessage = "Applied successfully"
-                                } else {
-                                    feedbackMessage = "Failed to apply"
-                                }
-                            }
+                            navController.navigate("jobForm/$jobId")
                         },
-                        enabled = canApply,
+
+                        enabled = applyState == ApplyState.CAN_APPLY,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(55.dp),
                         shape = RoundedCornerShape(14.dp)
                     ) {
-                        if (applyLoading) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        } else {
-                            Text(
-                                when {
-                                    applied -> "Applied"
-                                    !canApply -> "Not Eligible"
-                                    else -> "Apply"
-                                }
-                            )
-                        }
+                        Text(
+                            when (applyState) {
+                                ApplyState.ALREADY_APPLIED -> "Applied"
+                                ApplyState.BATCH_MISMATCH -> "Not for your batch"
+                                ApplyState.BRANCH_MISMATCH -> "Not for your branch"
+                                ApplyState.BACKLOG_RESTRICTED -> "Backlogs not allowed"
+                                ApplyState.CGPA_LOW -> "CGPA not eligible"
+                                ApplyState.PLACEMENT_RESTRICTED -> "Placement restriction"
+                                ApplyState.JOB_CLOSED -> "Application closed"
+                                ApplyState.CAN_APPLY -> "Apply"
+                                ApplyState.GENDER_RESTRICTED -> "Only female candidates allowed"
+                                ApplyState.DREAM_PACKAGE_RESTRICTED -> "Dream package restriction"
+
+                            }
+                        )
                     }
                 }
             }
+
 
         }
     }
